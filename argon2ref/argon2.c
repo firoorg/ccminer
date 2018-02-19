@@ -132,7 +132,10 @@ int argon2_ctx_from_mtp(argon2_context *context, argon2_instance_t *instance) {
 	instance->block_header[1] = ((uint32_t*)context->pwd)[1];
 	instance->block_header[2] = ((uint32_t*)context->pwd)[2];
 	instance->block_header[3] = ((uint32_t*)context->pwd)[3];
-
+	instance->block_header[4] = ((uint32_t*)context->pwd)[4];
+	instance->block_header[5] = ((uint32_t*)context->pwd)[5];
+	instance->block_header[6] = ((uint32_t*)context->pwd)[6];
+	instance->block_header[7] = ((uint32_t*)context->pwd)[7];
 //	printf("3. Initializatio n: Hashing inputs, allocating memory, filling first blocks\n");
 	/* 3. Initialization: Hashing inputs, allocating memory, filling first blocks */
 	result = initialize(instance, context);

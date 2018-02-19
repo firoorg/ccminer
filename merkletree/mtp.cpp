@@ -148,6 +148,45 @@ void fill_block2(__m128i *state, const block *ref_block, block *next_block, int 
 	}
 }
 
+void fill_block2_withIndex(__m128i *state, const block *ref_block, block *next_block, int with_xor, uint32_t block_header[8], uint64_t blockIndex) {
+	__m128i block_XY[ARGON2_OWORDS_IN_BLOCK];
+	unsigned int i;
+    uint64_t TheIndex[2]={0,blockIndex};
+	if (with_xor) {
+		for (i = 0; i < ARGON2_OWORDS_IN_BLOCK; i++) {
+			state[i] = _mm_xor_si128(
+				state[i], _mm_loadu_si128((const __m128i *)ref_block->v + i));
+			block_XY[i] = _mm_xor_si128(
+				state[i], _mm_loadu_si128((const __m128i *)next_block->v + i));
+		}
+	}
+	else {
+		for (i = 0; i < ARGON2_OWORDS_IN_BLOCK; i++) {
+			block_XY[i] = state[i] = _mm_xor_si128(
+				state[i], _mm_loadu_si128((const __m128i *)ref_block->v + i));
+		}
+	}
+	memcpy(&state[7], TheIndex, sizeof(__m128i));
+	memcpy(&state[8], block_header, sizeof(__m128i));
+	memcpy(&state[9], block_header + 4, sizeof(__m128i));
+	for (i = 0; i < 8; ++i) {
+		BLAKE2_ROUND(state[8 * i + 0], state[8 * i + 1], state[8 * i + 2],
+			state[8 * i + 3], state[8 * i + 4], state[8 * i + 5],
+			state[8 * i + 6], state[8 * i + 7]);
+	}
+
+	for (i = 0; i < 8; ++i) {
+		BLAKE2_ROUND(state[8 * 0 + i], state[8 * 1 + i], state[8 * 2 + i],
+			state[8 * 3 + i], state[8 * 4 + i], state[8 * 5 + i],
+			state[8 * 6 + i], state[8 * 7 + i]);
+	}
+
+	for (i = 0; i < ARGON2_OWORDS_IN_BLOCK; i++) {
+		state[i] = _mm_xor_si128(state[i], block_XY[i]);
+		_mm_storeu_si128((__m128i *)next_block->v + i, state[i]);
+	}
+}
+
 
 
 void copy_block(block *dst, const block *src) {
@@ -294,7 +333,7 @@ int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigne
 			__m128i state_test[64];
 			memset(state_test, 0, sizeof(state_test));
 			memcpy(state_test, &instance->memory[instance->memory[ij].prev_block & 0xffffffff].v, ARGON2_BLOCK_SIZE);
-			fill_block2(state_test, &instance->memory[instance->memory[ij].ref_block], &X_IJ, 0,instance->block_header);
+			fill_block2_withIndex(state_test, &instance->memory[instance->memory[ij].ref_block], &X_IJ, 0,instance->block_header, instance->memory[ij].ref_block);
 			X_IJ.prev_block = instance->memory[ij].prev_block;
 			X_IJ.ref_block = instance->memory[ij].ref_block;
 
