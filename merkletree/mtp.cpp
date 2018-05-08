@@ -15,6 +15,79 @@
 static const unsigned int d_mtp = 1;
 static const uint8_t L = 70;
 static const unsigned int memory_cost = 2097152*1;
+uint32_t index_beta(const argon2_instance_t *instance,
+	const argon2_position_t *position, uint32_t pseudo_rand,
+	int same_lane) {
+	/*
+	* Pass 0:
+	*      This lane : all already finished segments plus already constructed
+	* blocks in this segment
+	*      Other lanes : all already finished segments
+	* Pass 1+:
+	*      This lane : (SYNC_POINTS - 1) last segments plus already constructed
+	* blocks in this segment
+	*      Other lanes : (SYNC_POINTS - 1) last segments
+	*/
+	uint32_t reference_area_size;
+	uint64_t relative_position;
+	uint32_t start_position, absolute_position;
+
+	if (0 == position->pass) {
+		/* First pass */
+		if (0 == position->slice) {
+			/* First slice */
+			reference_area_size =
+				position->index - 1; /* all but the previous */
+		}
+		else {
+			if (same_lane) {
+				/* The same lane => add current segment */
+				reference_area_size =
+					position->slice * instance->segment_length +
+					position->index - 1;
+			}
+			else {
+				reference_area_size =
+					position->slice * instance->segment_length +
+					((position->index == 0) ? (-1) : 0);
+			}
+		}
+	}
+	else {
+		/* Second pass */
+		if (same_lane) {
+			reference_area_size = instance->lane_length -
+				instance->segment_length + position->index -
+				1;
+		}
+		else {
+			reference_area_size = instance->lane_length -
+				instance->segment_length +
+				((position->index == 0) ? (-1) : 0);
+		}
+	}
+
+	/* 1.2.4. Mapping pseudo_rand to 0..<reference_area_size-1> and produce
+	* relative position */
+	relative_position = pseudo_rand;
+	relative_position = relative_position * relative_position >> 32;
+	relative_position = reference_area_size - 1 -
+		(reference_area_size * relative_position >> 32);
+
+	/* 1.2.5 Computing starting position */
+	start_position = 0;
+
+	if (0 != position->pass) {
+		start_position = (position->slice == ARGON2_SYNC_POINTS - 1)
+			? 0
+			: (position->slice + 1) * instance->segment_length;
+	}
+
+	/* 1.2.6. Computing absolute position */
+	absolute_position = (start_position + relative_position) %
+		instance->lane_length; /* absolute position */
+	return absolute_position;
+}
 
 
 unsigned int trailing_zeros(char str[64]) {
@@ -285,6 +358,8 @@ argon2_context init_argon2d_param(const char* input) {
     return context;
 }
 
+
+
 int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigned int d, block_mtpProof *output, uint256 resultMerkleRoot, merkletree TheTree, uint256 hashTarget) {
 
 
@@ -293,14 +368,6 @@ int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigne
 	
 		uint512 Y[71];
 		memset(&Y, 0, sizeof(Y));
-/*
-		SHA256_CTX ctx;
-		SHA256_Init(&ctx);
-		SHA256_Update(&ctx, &resultMerkleRoot, sizeof(uint256));
-		SHA256_Update(&ctx, &TheNonce, sizeof(unsigned int));
-		SHA256_Final((unsigned char*)&Y[0], &ctx);
-*/	
-
 
 		ablake2b_state BlakeHash;
 		ablake2b_init(&BlakeHash, 32);
@@ -321,14 +388,60 @@ int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigne
 		bool init_blocks = false;
 		bool unmatch_block = false;
 		for (uint8_t j = 1; j <= L; j++) {
-			uint32_t ij = ((uint32_t*)(&Y[j - 1]))[0] % (instance->context_ptr->m_cost);
-	
+			uint32_t ij = (((uint32_t*)(&Y[j - 1]))[0]) % (instance->context_ptr->m_cost);
 			if (ij == 0 || ij == 1) {
 				init_blocks = true;
 				break;
 			}
 
 			block X_IJ;
+uint32_t ij_cor = 0;
+
+	if (ij%instance->lane_length==0) {
+			ij_cor = ij + instance->lane_length -1;
+printf("*********************************correction here ij %d ij_cor %d",ij,ij_cor);
+	} else {
+			ij_cor = ij - 1;
+	}
+	if (ij % instance->lane_length == 1) 
+			ij_cor = ij - 1;
+
+
+uint64_t ij_new = instance->memory[ij_cor].v[0];
+uint32_t ref_lane = (uint32_t)((ij_new >> 32) % instance->lanes);
+
+
+//ij_x = ij2;
+uint32_t ij_y = (uint32_t)(ij_new & 0xFFFFFFFF);
+printf("ij_x %08x ij_y %08x \n", (uint32_t)(ij_new >> 32), ij_y);
+//for (int x3=0;x3<4;x3++){
+//	for (int x1 =0;x1<4;x1++) {
+//	for (int x2 = 0; x2<4; x2++) {
+uint32_t Lane = ((ij) / instance->lane_length);
+uint32_t Slice = (ij - (Lane * instance->lane_length)) /instance->segment_length;
+uint32_t posIndex = ij - Lane * instance->lane_length - Slice * instance->segment_length;
+
+uint32_t rec_ij = Slice*instance->segment_length + Lane *instance->lane_length + (ij % instance->segment_length) ;
+printf("ij %d rec_ij %d Lane %d Slice %d posIndex %d otherIndex %d\n",ij,rec_ij,Lane,Slice,posIndex,ij%instance->segment_length);
+	if (Slice == 0) {
+		ref_lane = Lane;
+printf("Slice== 0");
+}
+
+	argon2_position_t position = { 0, Lane , (uint8_t)Slice, posIndex };
+	//position.index = (ij-1)%instance->segment_length;
+	//position.lane = (ij-1)%instance->lane_length;
+
+	uint32_t ref_index = index_beta(instance, &position, ij_y, ref_lane == position.lane);
+
+
+	uint32_t computed_ref_block = instance->lane_length * ref_lane + ref_index;
+//	printf("x1 %d x2 %d ij_x %d   position.lane %d position.index %d   refindex %f ref_block %f \n", Slice, Lane, ref_lane, position.lane, position.index, (double)ref_index, (double)ref_block);
+
+
+printf("ref_block %f computed ref_block %f difference %f \n",(double)instance->memory[ij].ref_block, (double)computed_ref_block, (double)(instance->memory[ij].ref_block - computed_ref_block));
+if (instance->memory[ij].ref_block != computed_ref_block)
+	printf("************************************************************************     error in computed ref_block");
 
 			__m128i state_test[64];
 			memset(state_test, 0, sizeof(state_test));
@@ -351,13 +464,6 @@ int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigne
 			}
 			//				printf("coming here 1\n");
 			store_block(&blockhash_bytes, &blockhash);
-/*
-			SHA256_CTX ctx_yj;
-			SHA256_Init(&ctx_yj);
-			SHA256_Update(&ctx_yj, &Y[j - 1], sizeof(uint256));
-			SHA256_Update(&ctx_yj, blockhash_bytes, ARGON2_BLOCK_SIZE);
-			SHA256_Final((unsigned char*)&Y[j], &ctx_yj);
-*/
 
 			ablake2b_state BlakeHash2;
 			ablake2b_init(&BlakeHash2, ARGON2_PREHASH_DIGEST_LENGTH / 2);
@@ -373,13 +479,7 @@ int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigne
 			uint8_t blockhash_bytes_current[ARGON2_BLOCK_SIZE];
 			copy_block(&blockhash_current, &instance->memory[ij]);
 			store_block(&blockhash_bytes_current, &blockhash_current);
-/*
-			SHA256_CTX ctx_current;
-			SHA256_Init(&ctx_current);
-			SHA256_Update(&ctx_current, blockhash_bytes_current, ARGON2_BLOCK_SIZE);
-			
-			SHA256_Final((unsigned char*)&t_current, &ctx_current);
-*/
+
 			uint512 t_current;
 			ablake2b_state ctx_current;
 			ablake2b_init(&ctx_current, ARGON2_PREHASH_DIGEST_LENGTH/2);
@@ -406,13 +506,7 @@ int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigne
 			copy_block(&blockhash_previous, &instance->memory[instance->memory[ij].prev_block & 0xffffffff]);
 			store_block(&blockhash_bytes_previous, &blockhash_previous);
 			/* generate proof with prev block */
-/*
-			SHA256_CTX ctx_previous;
-			SHA256_Init(&ctx_previous);
-			SHA256_Update(&ctx_previous, blockhash_bytes_previous, ARGON2_BLOCK_SIZE);
-			uint256 t_previous;
-			SHA256_Final((unsigned char*)&t_previous, &ctx_previous);
-*/
+
 			uint512 t_previous;
 			ablake2b_state ctx_previous;
 			ablake2b_init(&ctx_previous, ARGON2_PREHASH_DIGEST_LENGTH/2);
@@ -438,13 +532,7 @@ int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigne
 			uint8_t blockhash_bytes_ref_block[ARGON2_BLOCK_SIZE];
 			copy_block(&blockhash_ref_block, &instance->memory[instance->memory[ij].ref_block]);
 			store_block(&blockhash_bytes_ref_block, &blockhash_ref_block);
-/*
-			SHA256_CTX ctx_ref;
-			SHA256_Init(&ctx_ref);
-			SHA256_Update(&ctx_ref, blockhash_bytes_ref_block, ARGON2_BLOCK_SIZE);
-			uint256 t_ref_block;
-			SHA256_Final((unsigned char*)&t_ref_block, &ctx_ref);
-*/
+
 			uint512 t_ref_block;
 			ablake2b_state ctx_ref;
 			ablake2b_init(&ctx_ref, ARGON2_PREHASH_DIGEST_LENGTH/2);

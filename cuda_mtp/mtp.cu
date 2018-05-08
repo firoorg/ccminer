@@ -1,9 +1,5 @@
 
-/*
-extern "C" {
 
-}
-*/
 #include "argon2ref/argon2.h"
 #include "merkletree/mtp.h"
 
@@ -85,7 +81,7 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 		be32enc(&endiandata[k], pdata[k]);
 
 	((uint32_t*)pdata)[19]=0; //start fresh
-	TheNonce = ((uint32_t*)pdata)[19];
+	TheNonce = ((uint32_t*)pdata)[19]; 
 
 	argon2_context context = init_argon2d_param((const char*)pdata);
 	argon2_instance_t instance;

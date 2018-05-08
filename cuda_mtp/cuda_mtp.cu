@@ -732,7 +732,7 @@ uint32_t prev_block_offset, uint32_t ref_block_offset)
 
 	__syncthreads();
 
-
+ 
 	for (int i = 0; i<itu4; i++)
 	if ((shift + itu4 * (threadIdx.x % 32) + i)==8)
 		((uint4*)blockR)[shift + itu4 * (threadIdx.x % 32) + i] = ((uint4*)pData)[0];
@@ -740,6 +740,121 @@ uint32_t prev_block_offset, uint32_t ref_block_offset)
 //		printf("GPU pdat %08x %08x %08x %08x\n",pData[0],pData[1],pData[2],pData[3]);
 
 //
+	__syncthreads();
+
+#define G(a,b,c,d) \
+   { \
+     a = fBlaMka(a,b); \
+     d = eorswap32(d ,a); \
+     c = fBlaMka(c,d); \
+     b = ROR2(b ^ c, 24); \
+     a = fBlaMka(a,b); \
+     d = ROR16(d ^ a); \
+     c = fBlaMka(c,d); \
+     b = ROR2(b ^ c, 63); \
+  } 
+
+#define BLAKE2_ROUND_NOMSG(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11,   \
+                           v12, v13, v14, v15)  \
+  { \
+    G(v0,v4,v8,v12); \
+    G(v1,v5,v9,v13); \
+    G(v2,v6,v10,v14); \
+    G(v3,v7,v11,v15); \
+    G(v0,v5,v10,v15); \
+    G(v1,v6,v11,v12); \
+    G(v2,v7,v8,v13); \
+    G(v3,v4,v9,v14); \
+  }
+
+	/* Apply Blake2 on columns of 64-bit words: (0,1,...,15) , then
+	(16,17,..31)... finally (112,113,...127) */
+	if ((threadIdx.x % 32) <8) {
+
+		//		for (int i = 0; i < 8; i++) {
+		{
+			int i = threadIdx.x % 32;
+			BLAKE2_ROUND_NOMSG(
+				blockR[shift2 + 16 * i], blockR[shift2 + 16 * i + 1], blockR[shift2 + 16 * i + 2],
+				blockR[shift2 + 16 * i + 3], blockR[shift2 + 16 * i + 4], blockR[shift2 + 16 * i + 5],
+				blockR[shift2 + 16 * i + 6], blockR[shift2 + 16 * i + 7], blockR[shift2 + 16 * i + 8],
+				blockR[shift2 + 16 * i + 9], blockR[shift2 + 16 * i + 10], blockR[shift2 + 16 * i + 11],
+				blockR[shift2 + 16 * i + 12], blockR[shift2 + 16 * i + 13], blockR[shift2 + 16 * i + 14],
+				blockR[shift2 + 16 * i + 15]);
+		}
+
+		/* Apply Blake2 on rows of 64-bit words: (0,1,16,17,...112,113), then
+		(2,3,18,19,...,114,115).. finally (14,15,30,31,...,126,127) */
+
+
+		__syncthreads();
+		{
+			//	for (int i = 0; i < 8; i++) {
+			int i = threadIdx.x % 32;
+			BLAKE2_ROUND_NOMSG(
+				blockR[shift2 + 2 * i], blockR[shift2 + 2 * i + 1], blockR[shift2 + 2 * i + 16],
+				blockR[shift2 + 2 * i + 17], blockR[shift2 + 2 * i + 32], blockR[shift2 + 2 * i + 33],
+				blockR[shift2 + 2 * i + 48], blockR[shift2 + 2 * i + 49], blockR[shift2 + 2 * i + 64],
+				blockR[shift2 + 2 * i + 65], blockR[shift2 + 2 * i + 80], blockR[shift2 + 2 * i + 81],
+				blockR[shift2 + 2 * i + 96], blockR[shift2 + 2 * i + 97], blockR[shift2 + 2 * i + 112],
+				blockR[shift2 + 2 * i + 113]);
+		}
+	}
+
+	__syncthreads();
+	for (int i = 0; i<itu2; i++)
+		block_tmp[shift2 + itu2 * (threadIdx.x % 32) + i] ^= blockR[shift2 + itu2 * (threadIdx.x % 32) + i];
+
+
+
+	for (int i = 0; i<itu4; i++)
+		output[itu4 * (threadIdx.x % 32) + i] = ((uint4*)block_tmp)[shift + itu4 * (threadIdx.x % 32) + i];
+
+	__syncthreads();
+#undef G 
+#undef BLAKE2_ROUND_NOMSG
+}
+
+__device__ static void fill_block4_doubleshared_mtp_output_bhdr_idx(uint4  * output, const uint4  * __restrict__ block /*, uint32_t *blockHistory*/,
+	uint32_t prev_block_offset, uint32_t ref_block_offset)
+{
+	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32 pDat[4] = { 0 };
+	__shared__ uint2 blockR[128];
+	__shared__ uint2 block_tmp[128];
+//	uint4 IndexContainer = {ref_block_offset,0,0,0};
+	uint4 IndexContainer = {0,0,ref_block_offset,0};
+
+	uint32_t shift2 = 128 * (threadIdx.x / 32);
+	uint32_t shift = 64 * (threadIdx.x / 32);
+	uint32_t itu4 = 64 / 32; //(gpu_shared/8);
+	uint32_t itu2 = 128 / 32; //(gpu_shared/8);
+							  //	if (threadIdx.x < 32) return;
+
+	for (int i = 0; i<itu4; i++)
+		((uint4*)blockR)[shift + itu4 * (threadIdx.x % 32) + i] = block[itu4 * (threadIdx.x % 32) + i + 64 * ref_block_offset];
+
+	for (int i = 0; i<itu4; i++)
+		((uint4*)blockR)[shift + itu4 * (threadIdx.x % 32) + i] ^= block[itu4 * (threadIdx.x % 32) + i + 64 * prev_block_offset];
+
+	for (int i = 0; i<itu4; i++)
+		((uint4*)block_tmp)[shift + itu4 * (threadIdx.x % 32) + i] = ((uint4*)blockR)[shift + itu4 * (threadIdx.x % 32) + i];
+
+	__syncthreads();
+
+
+	for (int i = 0; i<itu4; i++) {
+		if ((shift + itu4 * (threadIdx.x % 32) + i) == 7)
+			((uint4*)blockR)[shift + itu4 * (threadIdx.x % 32) + i] = IndexContainer;
+		if ((shift + itu4 * (threadIdx.x % 32) + i) == 8)
+			((uint4*)blockR)[shift + itu4 * (threadIdx.x % 32) + i] = ((uint4*)pData)[0];
+		if ((shift + itu4 * (threadIdx.x % 32) + i) == 9)
+			((uint4*)blockR)[shift + itu4 * (threadIdx.x % 32) + i] = ((uint4*)pData)[1];
+	}
+	//if (thread==0)
+	//		printf("GPU pdat %08x %08x %08x %08x\n",pData[0],pData[1],pData[2],pData[3]);
+
+	//
 	__syncthreads();
 
 #define G(a,b,c,d) \
@@ -888,7 +1003,7 @@ void mtp_yloop(uint32_t threads, uint32_t startNounce, const uint4  * __restrict
 
 			uint32_t ref_block  = history.y;
 			uint32_t prev_block = history.x;
-			fill_block4_doubleshared_mtp_output_bhdr(X_IJ, GBlock, prev_block, ref_block);
+			fill_block4_doubleshared_mtp_output_bhdr_idx(X_IJ, GBlock, prev_block, ref_block);
 
 			int countIndex;
 			for (countIndex = threadIdx.x%32; countIndex < 128; countIndex+=32) {

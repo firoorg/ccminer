@@ -167,6 +167,7 @@ void fill_segment(const argon2_instance_t *instance,
         (instance->type == Argon2_id && (position.pass == 0) &&
          (position.slice < ARGON2_SYNC_POINTS / 2));
 
+
     if (data_independent_addressing) {
         init_block_value(&zero_block, 0);
         init_block_value(&input_block, 0);
@@ -218,12 +219,9 @@ truc++;
             }
             pseudo_rand = address_block.v[i % ARGON2_ADDRESSES_IN_BLOCK];
         } else {
-            pseudo_rand = instance->memory[prev_offset].v[0];
+           pseudo_rand = instance->memory[prev_offset].v[0];
         }
-//if (i==starting_index)
-//printf("\n");
-//printf(" *** prevOffset %d ***",prev_offset);
-//	instance->lane_length, instance->segment_length,i,pseudo_rand);
+
         /* 1.2.2 Computing the lane of the reference block */
         ref_lane = ((pseudo_rand >> 32)) % instance->lanes;
 
@@ -243,12 +241,15 @@ truc++;
         ref_index = index_alpha(instance, &position, pseudo_rand & 0xFFFFFFFF,
                                 ref_lane == position.lane);
 
+
         /* 2 Creating a new block */
         ref_block =
             instance->memory + instance->lane_length * ref_lane + ref_index;
 
         curr_block = instance->memory + curr_offset;
 		uint64_t TheBlockIndex = instance->lane_length * ref_lane + ref_index;
+
+
 /*
 		zRefBlock  = &instance->TheRefBlock + curr_offset;
 		zPrevBlock = &instance->ThePrevBlock + curr_offset;
