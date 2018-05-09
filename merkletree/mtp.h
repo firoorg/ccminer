@@ -53,7 +53,7 @@ typedef struct mtp_Proof_ {
 void mtp_hash(char* output, const char* input, unsigned int d, uint32_t TheNonce);
 argon2_context init_argon2d_param(const char* input);
 
-
+void getBlockIndex(uint32_t ij, argon2_instance_t *instance, uint32_t *Index);
 
 int mtp_init(uint32_t TheNonce, argon2_instance_t *instance, unsigned int d, uint256 &resultMerkleRoot);
 int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigned int d, block_mtpProof *output, uint256 resultMerkleRoot, merkletree TheTree, uint256 hashTarget);

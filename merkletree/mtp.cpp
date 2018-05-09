@@ -15,6 +15,7 @@
 static const unsigned int d_mtp = 1;
 static const uint8_t L = 70;
 static const unsigned int memory_cost = 2097152*1;
+
 uint32_t index_beta(const argon2_instance_t *instance,
 	const argon2_position_t *position, uint32_t pseudo_rand,
 	int same_lane) {
@@ -89,6 +90,42 @@ uint32_t index_beta(const argon2_instance_t *instance,
 	return absolute_position;
 }
 
+void getBlockIndex(uint32_t ij, argon2_instance_t *instance, uint32_t *Index)
+{
+	uint32_t ij_prev = 0;
+	if (ij%instance->lane_length == 0) 
+		ij_prev = ij + instance->lane_length - 1;
+	else 
+		ij_prev = ij - 1;
+
+	if (ij % instance->lane_length == 1)
+		ij_prev = ij - 1;
+
+	uint64_t prev_block_opening = instance->memory[ij_prev].v[0];
+	uint32_t ref_lane = (uint32_t)((prev_block_opening >> 32) % instance->lanes);
+
+	uint32_t pseudo_rand = (uint32_t)(prev_block_opening & 0xFFFFFFFF);
+
+	uint32_t Lane = ((ij) / instance->lane_length);
+	uint32_t Slice = (ij - (Lane * instance->lane_length)) / instance->segment_length;
+	uint32_t posIndex = ij - Lane * instance->lane_length - Slice * instance->segment_length;
+
+
+	uint32_t rec_ij = Slice*instance->segment_length + Lane *instance->lane_length + (ij % instance->segment_length);
+
+	if (Slice == 0) 
+		ref_lane = Lane;
+
+
+	argon2_position_t position = { 0, Lane , (uint8_t)Slice, posIndex };
+
+	uint32_t ref_index = index_beta(instance, &position, pseudo_rand, ref_lane == position.lane);
+
+	uint32_t computed_ref_block = instance->lane_length * ref_lane + ref_index;
+
+	 Index[0] = ij_prev;
+	 Index[1] = computed_ref_block;
+}
 
 unsigned int trailing_zeros(char str[64]) {
 
@@ -395,11 +432,15 @@ int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigne
 			}
 
 			block X_IJ;
+			uint32_t TheBlockIndex[2]={0};
+			getBlockIndex(ij, instance, TheBlockIndex);
+
+/*
+
 uint32_t ij_cor = 0;
 
 	if (ij%instance->lane_length==0) {
 			ij_cor = ij + instance->lane_length -1;
-printf("*********************************correction here ij %d ij_cor %d",ij,ij_cor);
 	} else {
 			ij_cor = ij - 1;
 	}
@@ -410,37 +451,29 @@ printf("*********************************correction here ij %d ij_cor %d",ij,ij_
 uint64_t ij_new = instance->memory[ij_cor].v[0];
 uint32_t ref_lane = (uint32_t)((ij_new >> 32) % instance->lanes);
 
-
-//ij_x = ij2;
 uint32_t ij_y = (uint32_t)(ij_new & 0xFFFFFFFF);
-printf("ij_x %08x ij_y %08x \n", (uint32_t)(ij_new >> 32), ij_y);
-//for (int x3=0;x3<4;x3++){
-//	for (int x1 =0;x1<4;x1++) {
-//	for (int x2 = 0; x2<4; x2++) {
+
 uint32_t Lane = ((ij) / instance->lane_length);
 uint32_t Slice = (ij - (Lane * instance->lane_length)) /instance->segment_length;
 uint32_t posIndex = ij - Lane * instance->lane_length - Slice * instance->segment_length;
 
 uint32_t rec_ij = Slice*instance->segment_length + Lane *instance->lane_length + (ij % instance->segment_length) ;
-printf("ij %d rec_ij %d Lane %d Slice %d posIndex %d otherIndex %d\n",ij,rec_ij,Lane,Slice,posIndex,ij%instance->segment_length);
-	if (Slice == 0) {
+
+	if (Slice == 0) 
 		ref_lane = Lane;
-printf("Slice== 0");
-}
 
 	argon2_position_t position = { 0, Lane , (uint8_t)Slice, posIndex };
-	//position.index = (ij-1)%instance->segment_length;
-	//position.lane = (ij-1)%instance->lane_length;
 
 	uint32_t ref_index = index_beta(instance, &position, ij_y, ref_lane == position.lane);
 
 
 	uint32_t computed_ref_block = instance->lane_length * ref_lane + ref_index;
-//	printf("x1 %d x2 %d ij_x %d   position.lane %d position.index %d   refindex %f ref_block %f \n", Slice, Lane, ref_lane, position.lane, position.index, (double)ref_index, (double)ref_block);
+*/
 
 
-printf("ref_block %f computed ref_block %f difference %f \n",(double)instance->memory[ij].ref_block, (double)computed_ref_block, (double)(instance->memory[ij].ref_block - computed_ref_block));
-if (instance->memory[ij].ref_block != computed_ref_block)
+
+printf("ref_block %f computed ref_block %f difference %f \n",(double)instance->memory[ij].ref_block, (double)TheBlockIndex[1], (double)(instance->memory[ij].ref_block - TheBlockIndex[1]));
+if (instance->memory[ij].ref_block != TheBlockIndex[1])
 	printf("************************************************************************     error in computed ref_block");
 
 			__m128i state_test[64];
