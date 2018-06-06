@@ -6,16 +6,14 @@
 
 #include "miner.h"
 #include "cuda_helper.h"
-#define memcost 2*1024*1024
-static uint32_t* d_hash[MAX_GPUS];
-
+#define memcost 4*1024*1024
 
 extern void mtp_cpu_init(int thr_id, uint32_t threads);
 
-extern uint32_t mtp_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash);
+extern uint32_t mtp_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce);
 
 extern void mtp_setBlockTarget(const void* pDataIn, const void *pTargetIn, const void * zElement);
-extern void mtp_fill(const uint64_t *Block, const uint64_t zblockHistory, uint32_t offset);
+extern void mtp_fill(const uint64_t *Block, uint32_t offset);
 
 #define HASHLEN 32
 #define SALTLEN 16
@@ -28,8 +26,8 @@ static __thread uint32_t throughput = 0;
 extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp)
 {
 
-	uint256 TheMerkleRoot;
-	merkletree *TheTree = new merkletree;
+	unsigned char TheMerkleRoot[16];
+	MerkleTree::Elements TheElements; // = new MerkleTree;
 	
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
@@ -70,27 +68,28 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 
 		init[thr_id] = true;
 
-//		argon2_ctx_from_mtp(&context, &instance);
-//		TheTree[0] = mtp_init_withtree(&instance, TheMerkleRoot);
-//		for (int i = 0; i<memcost; i++)
-//			mtp_fill(instance.memory[i].v, instance.memory[i].prev_block, i);
 	}
 
 	uint32_t _ALIGN(128) endiandata[20];
+	((uint32_t*)pdata)[19] = 0x00100000; // mtp version not the actual nonce
 	for (int k=0; k < 20; k++)
 		be32enc(&endiandata[k], pdata[k]);
 
-	((uint32_t*)pdata)[19]=0; //start fresh
-	TheNonce = ((uint32_t*)pdata)[19]; 
+//	((uint32_t*)pdata)[19] = 0;
+	argon2_context context = init_argon2d_param((const char*)endiandata);
 
-	argon2_context context = init_argon2d_param((const char*)pdata);
 	argon2_instance_t instance;
 	argon2_ctx_from_mtp(&context, &instance);
-	TheTree[0] = mtp_init_withtree(&instance, TheMerkleRoot);
-    ptarget[7] = 0x0000800;
-	mtp_setBlockTarget(pdata,ptarget,&TheMerkleRoot);
+	TheElements = mtp_init_withtree(&instance, TheMerkleRoot);
+	MerkleTree ordered_tree(TheElements, true);
+	MerkleTree::Buffer root = ordered_tree.getRoot();
+	std::copy(root.begin(), root.end(), TheMerkleRoot);
+
+	mtp_setBlockTarget(endiandata,ptarget,&TheMerkleRoot);
+printf("filling memory\n");
 for (int i=0;i<memcost;i++)
-	mtp_fill(instance.memory[i].v,instance.memory[i].prev_block,i);
+	mtp_fill(instance.memory[i].v,i);
+printf("memory filled \n");
 
 do  {
 		int order = 0;
@@ -98,34 +97,52 @@ do  {
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 	  
-		foundNonce = mtp_cpu_hash_32(thr_id, throughput, pdata[19], d_hash[thr_id]); 
-//		foundNonce = pdata[19];
+		foundNonce = mtp_cpu_hash_32(thr_id, throughput, pdata[19]);
+
+		uint32_t _ALIGN(64) vhash64[8];
 		if (foundNonce != UINT32_MAX)
 		{
-			uint32_t _ALIGN(64) vhash64[8];
+
 			block_mtpProof TheBlocksAndProofs[140];
 			uint256 TheUint256Target[1];
 			TheUint256Target[0] = ((uint256*)ptarget)[0];
 
-			uint32_t is_sol = mtp_solver_withblock(foundNonce, &instance, diff, TheBlocksAndProofs, TheMerkleRoot,TheTree[0],TheUint256Target[0]);
+			blockS nBlockMTP[72*2];
+			unsigned char nProofMTP[72*3*375];
+
+			uint32_t is_sol = mtp_solver_withblock(foundNonce, &instance, nBlockMTP,nProofMTP, TheMerkleRoot, ordered_tree, endiandata,TheUint256Target[0]);
 
 			if (is_sol==1 /*&& fulltest(vhash64, ptarget)*/) {
 				int res = 1;
 				work_set_target_ratio(work, vhash64);		
-				be32enc(&pdata[19], foundNonce);
-				pdata[19] = foundNonce;
-//				for (uint32_t i=0;i<mtp_block_num;i++)
-//					for (uint32_t j=0;j<mtp_block_size;j++)
-//								((uchar*)mtp->mtpproof[i])[j] = ((uchar*)TheBlocksAndProofs)[mtp_block_size*i+j];
+
+				pdata[19] = swab32(foundNonce);
+
+/// fill mtp structure
+				mtp->MTPVersion = 0x1000;
+			for (int i=0;i<16;i++)
+				mtp->MerkleRoot[i] = TheMerkleRoot[i];
+			
+			for (int j=0;j<(72*2);j++)
+				for (int i=0;i<128;i++)
+				mtp->nBlockMTP[j][i]=nBlockMTP[j].v[i];
+                int lenMax =0;
+				int len = 0;
+
+				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)*72*3*375);
+
+				mtp->sizeProofMTP[0]= 375;
 
 				free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
-				delete TheTree;
+				ordered_tree.~MerkleTree();
+				TheElements.clear();
 				return res;
 
 			} else {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
 			}
 		}
+		work_set_target_ratio(work, vhash64);
 /*
 		if ((uint64_t)throughput + pdata[19] >= max_nonce) {
 			pdata[19] = max_nonce;
@@ -133,11 +150,13 @@ do  {
 		}
 */
 		pdata[19] += throughput;
-		be32enc(&endiandata[19], pdata[19]);
+//		be32enc(&endiandata[19], pdata[19]);
 	}   while (!work_restart[thr_id].restart && pdata[19]<0xeffffff);
 	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
 	*hashes_done = pdata[19] - first_nonce;
-	delete TheTree;
+//	delete TheTree;
+	ordered_tree.~MerkleTree();
+	TheElements.clear();
 	return 0;
 }
 

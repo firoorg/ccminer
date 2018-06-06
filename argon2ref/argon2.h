@@ -229,7 +229,7 @@ typedef enum Argon2_version {
 } argon2_version;
 // big hack
 typedef struct block_ { uint64_t v[128]; uint64_t prev_block; uint64_t ref_block;} block;
-
+typedef struct blockS_ { uint64_t v[128];} blockS;
 /*
 typedef struct block_with_offset_ {
 	block memory;
@@ -256,7 +256,7 @@ typedef struct Argon2_instance_t {
 	argon2_type type;
 	int print_internals; /* whether to print the memory blocks */
 	argon2_context *context_ptr; /* points back to original context */
-	uint32_t block_header[8]; // takes 256 first bits of the blockheader
+	uint32_t block_header[18]; // takes 256 first bits of the blockheader //hash_0
 } argon2_instance_t;
 
 

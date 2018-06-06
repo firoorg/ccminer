@@ -8,27 +8,22 @@
 #include <winbase.h> /* For SecureZeroMemory */
 #endif
 
+#include <ios>
+#include <stdio.h>
+#include <iostream>
 #if defined __STDC_LIB_EXT1__
 #define __STDC_WANT_LIB_EXT1__ 1
 #endif
 
+#define memcost 4*1024*1024
 static const unsigned int d_mtp = 1;
-static const uint8_t L = 70;
-static const unsigned int memory_cost = 2097152*1;
+static const uint8_t L = 72;
+static const unsigned int memory_cost = memcost;
 
 uint32_t index_beta(const argon2_instance_t *instance,
 	const argon2_position_t *position, uint32_t pseudo_rand,
 	int same_lane) {
-	/*
-	* Pass 0:
-	*      This lane : all already finished segments plus already constructed
-	* blocks in this segment
-	*      Other lanes : all already finished segments
-	* Pass 1+:
-	*      This lane : (SYNC_POINTS - 1) last segments plus already constructed
-	* blocks in this segment
-	*      Other lanes : (SYNC_POINTS - 1) last segments
-	*/
+	
 	uint32_t reference_area_size;
 	uint64_t relative_position;
 	uint32_t start_position, absolute_position;
@@ -90,12 +85,14 @@ uint32_t index_beta(const argon2_instance_t *instance,
 	return absolute_position;
 }
 
-void getBlockIndex(uint32_t ij, argon2_instance_t *instance, uint32_t *Index)
+
+
+void getblockindex(uint32_t ij, argon2_instance_t *instance, uint32_t *out_ij_prev, uint32_t *out_computed_ref_block)
 {
 	uint32_t ij_prev = 0;
-	if (ij%instance->lane_length == 0) 
+	if (ij%instance->lane_length == 0)
 		ij_prev = ij + instance->lane_length - 1;
-	else 
+	else
 		ij_prev = ij - 1;
 
 	if (ij % instance->lane_length == 1)
@@ -113,7 +110,7 @@ void getBlockIndex(uint32_t ij, argon2_instance_t *instance, uint32_t *Index)
 
 	uint32_t rec_ij = Slice*instance->segment_length + Lane *instance->lane_length + (ij % instance->segment_length);
 
-	if (Slice == 0) 
+	if (Slice == 0)
 		ref_lane = Lane;
 
 
@@ -123,9 +120,12 @@ void getBlockIndex(uint32_t ij, argon2_instance_t *instance, uint32_t *Index)
 
 	uint32_t computed_ref_block = instance->lane_length * ref_lane + ref_index;
 
-	 Index[0] = ij_prev;
-	 Index[1] = computed_ref_block;
+	*out_ij_prev = ij_prev;
+	*out_computed_ref_block = computed_ref_block;
 }
+
+
+
 
 unsigned int trailing_zeros(char str[64]) {
 
@@ -160,7 +160,7 @@ unsigned int trailing_zeros_little_endian(char str[64]) {
 
 unsigned int trailing_zeros_little_endian_uint256(uint256 hash) {
 	unsigned int i, d;
-	string temp = hash.GetHex();
+	std::string temp = hash.GetHex();
 	d = 0;
 	for (i = 0; i < temp.size(); i++) {
 		if (temp[i] == '0') {
@@ -302,6 +302,14 @@ void fill_block2_withIndex(__m128i *state, const block *ref_block, block *next_b
 void copy_block(block *dst, const block *src) {
 	memcpy(dst->v, src->v, sizeof(uint64_t) * ARGON2_QWORDS_IN_BLOCK);
 }
+void copy_blockS(blockS *dst, const blockS *src) {
+	memcpy(dst->v, src->v, sizeof(uint64_t) * ARGON2_QWORDS_IN_BLOCK);
+}
+void copy_blockS(blockS *dst, const block *src) {
+	memcpy(dst->v, src->v, sizeof(uint64_t) * ARGON2_QWORDS_IN_BLOCK);
+}
+
+
 #define VC_GE_2005(version) (version >= 1400)
 
 void  secure_wipe_memory(void *v, size_t n) {
@@ -357,7 +365,8 @@ argon2_context init_argon2d_param(const char* input) {
     const deallocate_fptr myown_deallocator = NULL;
 
     unsigned t_cost = 1;
-    unsigned m_cost =  2*1024*1024; //+896*1024; //32768*1;
+    unsigned m_cost =  memcost; //2*1024*1024; //*1024; //+896*1024; //32768*1;
+	
     unsigned lanes = 4;
 
     memset(pContext,0,sizeof(argon2_context));
@@ -397,189 +406,158 @@ argon2_context init_argon2d_param(const char* input) {
 
 
 
-int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigned int d, block_mtpProof *output, uint256 resultMerkleRoot, merkletree TheTree, uint256 hashTarget) {
+int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance,
+	blockS *nBlockMTP /*[72 * 2][128]*/,unsigned char* nProofMTP, uint8_t* resultMerkleRoot, 
+MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 
 
 
 	if (instance != NULL) {
-	
-		uint512 Y[71];
+//		input[19]=0x01000000;
+		uint256 Y[L+1];
+//		std::string proof_blocks[L * 3];
 		memset(&Y, 0, sizeof(Y));
-
+		uint8_t zero[32] = {0};
 		ablake2b_state BlakeHash;
 		ablake2b_init(&BlakeHash, 32);
-		ablake2b_update(&BlakeHash, &resultMerkleRoot, sizeof(uint256));
+	
+		uint32_t Test[4];
+
+	for (int i = 0; i<4;i++)
+			Test[i] = ((uint32_t*)resultMerkleRoot)[i];
+
+
+
+		ablake2b_update(&BlakeHash, (unsigned char*)&input[0], 80);
+		ablake2b_update(&BlakeHash, (unsigned char*)&resultMerkleRoot[0], 16);
 		ablake2b_update(&BlakeHash, &TheNonce, sizeof(unsigned int));
 		ablake2b_final(&BlakeHash, (unsigned char*)&Y[0], 32);
 
 
-	printf("\n cpu first blake");
-	for (int n = 0; n < 16; n++) {
-		printf(" %08x ", ((uint32_t*)&Y[0])[n]);
-		//                sprintf(&hex_tmp[n * 2], "%02x", Y[L][n]);
-	}
-	printf("\n");
 
-
+		blockS blocks[L * 2];
+		
 		///////////////////////////////
 		bool init_blocks = false;
 		bool unmatch_block = false;
+		unsigned char proof_ser[1000]={0};
+		unsigned int proof_size;
 		for (uint8_t j = 1; j <= L; j++) {
-			uint32_t ij = (((uint32_t*)(&Y[j - 1]))[0]) % (instance->context_ptr->m_cost);
-			if (ij == 0 || ij == 1) {
+ 
+			uint32_t ij = (((uint32_t*)(&Y[j - 1]))[0]) % (instance->context_ptr->m_cost );
+			uint32_t except_index = (uint32_t)(instance->context_ptr->m_cost / instance->context_ptr->lanes);
+			if (ij %except_index == 0 || ij%except_index == 1) {
 				init_blocks = true;
 				break;
 			}
-
-			block X_IJ;
-			uint32_t TheBlockIndex[2]={0};
-			getBlockIndex(ij, instance, TheBlockIndex);
-
-/*
-
-uint32_t ij_cor = 0;
-
-	if (ij%instance->lane_length==0) {
-			ij_cor = ij + instance->lane_length -1;
-	} else {
-			ij_cor = ij - 1;
-	}
-	if (ij % instance->lane_length == 1) 
-			ij_cor = ij - 1;
-
-
-uint64_t ij_new = instance->memory[ij_cor].v[0];
-uint32_t ref_lane = (uint32_t)((ij_new >> 32) % instance->lanes);
-
-uint32_t ij_y = (uint32_t)(ij_new & 0xFFFFFFFF);
-
-uint32_t Lane = ((ij) / instance->lane_length);
-uint32_t Slice = (ij - (Lane * instance->lane_length)) /instance->segment_length;
-uint32_t posIndex = ij - Lane * instance->lane_length - Slice * instance->segment_length;
-
-uint32_t rec_ij = Slice*instance->segment_length + Lane *instance->lane_length + (ij % instance->segment_length) ;
-
-	if (Slice == 0) 
-		ref_lane = Lane;
-
-	argon2_position_t position = { 0, Lane , (uint8_t)Slice, posIndex };
-
-	uint32_t ref_index = index_beta(instance, &position, ij_y, ref_lane == position.lane);
-
-
-	uint32_t computed_ref_block = instance->lane_length * ref_lane + ref_index;
-*/
-
-
-
-printf("ref_block %f computed ref_block %f difference %f \n",(double)instance->memory[ij].ref_block, (double)TheBlockIndex[1], (double)(instance->memory[ij].ref_block - TheBlockIndex[1]));
-if (instance->memory[ij].ref_block != TheBlockIndex[1])
-	printf("************************************************************************     error in computed ref_block");
-
-			__m128i state_test[64];
-			memset(state_test, 0, sizeof(state_test));
-			memcpy(state_test, &instance->memory[instance->memory[ij].prev_block & 0xffffffff].v, ARGON2_BLOCK_SIZE);
-			fill_block2_withIndex(state_test, &instance->memory[instance->memory[ij].ref_block], &X_IJ, 0,instance->block_header, instance->memory[ij].ref_block);
-			X_IJ.prev_block = instance->memory[ij].prev_block;
-			X_IJ.ref_block = instance->memory[ij].ref_block;
-
+ 
+			uint32_t prev_index;
+			uint32_t ref_index;
+			getblockindex(ij, instance, &prev_index, &ref_index);
+ 
+			copy_blockS(&nBlockMTP[j * 2 - 2], &instance->memory[prev_index]);
+			//ref block
+			copy_blockS(&nBlockMTP[j * 2 - 1], &instance->memory[ref_index]);
 
 			block blockhash;
 			uint8_t blockhash_bytes[ARGON2_BLOCK_SIZE];
 			copy_block(&blockhash, &instance->memory[ij]);
 
-			int countIndex;
-			for (countIndex = 0; countIndex < 128; countIndex++) {
-				if (X_IJ.v[countIndex] != instance->memory[ij].v[countIndex]) {
-					unmatch_block = true;
-					break;
-				}
-			}
-			//				printf("coming here 1\n");
+ 
 			store_block(&blockhash_bytes, &blockhash);
 
 			ablake2b_state BlakeHash2;
-			ablake2b_init(&BlakeHash2, ARGON2_PREHASH_DIGEST_LENGTH / 2);
+			ablake2b_init(&BlakeHash2, 32);
 			ablake2b_update(&BlakeHash2, &Y[j - 1], sizeof(uint256));
 			ablake2b_update(&BlakeHash2, blockhash_bytes, ARGON2_BLOCK_SIZE);
-			ablake2b_final(&BlakeHash2, (unsigned char*)&Y[j], ARGON2_PREHASH_DIGEST_LENGTH / 2);
-
-
+			ablake2b_final(&BlakeHash2, (unsigned char*)&Y[j], 32);
 ////////////////////////////////////////////////////////////////
 // current block
-	
-			block blockhash_current;
-			uint8_t blockhash_bytes_current[ARGON2_BLOCK_SIZE];
-			copy_block(&blockhash_current, &instance->memory[ij]);
-			store_block(&blockhash_bytes_current, &blockhash_current);
 
-			uint512 t_current;
-			ablake2b_state ctx_current;
-			ablake2b_init(&ctx_current, ARGON2_PREHASH_DIGEST_LENGTH/2);
-			ablake2b_update(&ctx_current, blockhash_bytes_current, ARGON2_BLOCK_SIZE);
-			ablake2b_final(&ctx_current, (unsigned char*)&t_current, ARGON2_PREHASH_DIGEST_LENGTH/2);
+			unsigned char curr[32] = { 0 };
+			block blockhash_curr;
+			uint8_t blockhash_curr_bytes[ARGON2_BLOCK_SIZE];
+			copy_block(&blockhash_curr, &instance->memory[ij]);
+			store_block(&blockhash_curr_bytes, &blockhash_curr);
+			ablake2b_state state_curr;
+			ablake2b_init(&state_curr, MERKLE_TREE_ELEMENT_SIZE_B);
+			ablake2b4rounds_update(&state_curr, blockhash_curr_bytes, ARGON2_BLOCK_SIZE);
+			uint8_t digest_curr[MERKLE_TREE_ELEMENT_SIZE_B];
+			ablake2b4rounds_final(&state_curr, digest_curr, sizeof(digest_curr));
+			MerkleTree::Buffer hash_curr = MerkleTree::Buffer(digest_curr, digest_curr + sizeof(digest_curr));
+			clear_internal_memory(blockhash_curr.v, ARGON2_BLOCK_SIZE);
+			clear_internal_memory(blockhash_curr_bytes, ARGON2_BLOCK_SIZE);
 
-			clear_internal_memory(blockhash_current.v, ARGON2_BLOCK_SIZE);
-			clear_internal_memory(blockhash_bytes_current, ARGON2_BLOCK_SIZE);
-		
-			vector<ProofNode> newproof_current = TheTree.proof(t_current.trim256());
+ 
 
-			char* buffer_current = serializeMTP(newproof_current);
-			memcpy(&output[j - 1].proof, buffer_current, newproof_current.size() * NODE_LENGTH + 1);
-			free(buffer_current);
+			CDataStream MyStreamCurr(4,8);
+			MyStreamCurr.clear();
+			Serialize(MyStreamCurr,TheTree.getProofOrdered(hash_curr, ij + 1),4,8);
+			for (int i=0;i<MyStreamCurr.size();i++) {
+			unsigned char Machin = MyStreamCurr[i];
+			nProofMTP[(j * 3 - 3)*375 + i] = Machin;
+			//		printf("MyStream %02x %02x machin %02x\n",MyStream[i]&0xff, TheNewString[i],Machin);
+			}
 
-
-/* save block_with_offset for previous block */
-			copy_block(&output[(j * 2) - 1].memory, &instance->memory[instance->memory[ij].prev_block & 0xffffffff]);
-			output[(j * 2) - 1].memory.prev_block = (instance->memory[instance->memory[ij].prev_block & 0xffffffff].prev_block) & 0xffffffff;
-			output[(j * 2) - 1].memory.ref_block = instance->memory[instance->memory[ij].prev_block & 0xffffffff].ref_block;
-
-			block blockhash_previous;
-			uint8_t blockhash_bytes_previous[ARGON2_BLOCK_SIZE];
-			copy_block(&blockhash_previous, &instance->memory[instance->memory[ij].prev_block & 0xffffffff]);
-			store_block(&blockhash_bytes_previous, &blockhash_previous);
-			/* generate proof with prev block */
-
-			uint512 t_previous;
-			ablake2b_state ctx_previous;
-			ablake2b_init(&ctx_previous, ARGON2_PREHASH_DIGEST_LENGTH/2);
-			ablake2b_update(&ctx_previous, blockhash_bytes_previous, ARGON2_BLOCK_SIZE);
-			ablake2b_final(&ctx_previous, (unsigned char*)&t_previous, ARGON2_PREHASH_DIGEST_LENGTH/2);
-
-
-
-			vector<ProofNode> newproof = TheTree.proof(t_previous.trim256());
-			/*    store proof    */
-			char* buffer = serializeMTP(newproof);
-			memcpy(output[(j * 2) - 1].proof, buffer_current, newproof.size() * NODE_LENGTH + 1);
-			free(buffer);
 			
-			/*    end            */
-//////////////////////////////////////////////////////////////////
-/* save block_with_offset for ref block */
-			copy_block(&output[(j * 2) - 2].memory, &instance->memory[instance->memory[ij].ref_block]);
-			output[(j * 2) - 2].memory.prev_block = instance->memory[instance->memory[ij].ref_block].prev_block & 0xffffffff;
-			output[(j * 2) - 2].memory.ref_block = instance->memory[instance->memory[ij].ref_block].ref_block;
-
-			block blockhash_ref_block;
-			uint8_t blockhash_bytes_ref_block[ARGON2_BLOCK_SIZE];
-			copy_block(&blockhash_ref_block, &instance->memory[instance->memory[ij].ref_block]);
-			store_block(&blockhash_bytes_ref_block, &blockhash_ref_block);
-
-			uint512 t_ref_block;
-			ablake2b_state ctx_ref;
-			ablake2b_init(&ctx_ref, ARGON2_PREHASH_DIGEST_LENGTH/2);
-			ablake2b_update(&ctx_ref, blockhash_bytes_ref_block, ARGON2_BLOCK_SIZE);
-			ablake2b_final(&ctx_ref, (unsigned char*)&t_ref_block, ARGON2_PREHASH_DIGEST_LENGTH/2);
 
 
 
+			//LogPrintf("storing prev proof\n");
+			//prev proof
+			unsigned char prev[32]={0};
+			block blockhash_prev;
+			uint8_t blockhash_prev_bytes[ARGON2_BLOCK_SIZE];
+			copy_block(&blockhash_prev, &instance->memory[prev_index]);
+			store_block(&blockhash_prev_bytes, &blockhash_prev);
+			ablake2b_state state_prev;
+			ablake2b_init(&state_prev, MERKLE_TREE_ELEMENT_SIZE_B);
+			ablake2b4rounds_update(&state_prev, blockhash_prev_bytes, ARGON2_BLOCK_SIZE);
+			uint8_t digest_prev[MERKLE_TREE_ELEMENT_SIZE_B];
 
-			vector<ProofNode> newproof_ref = TheTree.proof(t_ref_block.trim256());
 
-			char* buff = serializeMTP(newproof_ref);
-			memcpy(output[(j * 2) - 2].proof, buff, newproof_ref.size() * NODE_LENGTH  + 1);
-			free(buff);
+			ablake2b4rounds_final(&state_prev, digest_prev, sizeof(digest_prev));
+
+ 
+			MerkleTree::Buffer hash_prev = MerkleTree::Buffer(digest_prev, digest_prev + sizeof(digest_prev));
+			clear_internal_memory(blockhash_prev.v, ARGON2_BLOCK_SIZE);
+			clear_internal_memory(blockhash_prev_bytes, ARGON2_BLOCK_SIZE);
+ 
+			CDataStream MyStreamPrev(4, 8);
+			MyStreamPrev.clear();
+			Serialize(MyStreamPrev, TheTree.getProofOrdered(hash_prev, prev_index + 1), 4, 8);
+			for (int i = 0; i<MyStreamPrev.size(); i++) {
+				unsigned char Machin = MyStreamPrev[i];
+				nProofMTP[(j * 3 - 2) * 375 + i] = Machin;
+				//		printf("MyStream %02x %02x machin %02x\n",MyStream[i]&0xff, TheNewString[i],Machin);
+			}
+
+
+ 
+			//ref proof
+			unsigned char ref[32] = { 0 };
+			block blockhash_ref;
+			uint8_t blockhash_ref_bytes[ARGON2_BLOCK_SIZE];
+			copy_block(&blockhash_ref, &instance->memory[ref_index]);
+			store_block(&blockhash_ref_bytes, &blockhash_ref);
+			ablake2b_state state_ref;
+			ablake2b_init(&state_ref, MERKLE_TREE_ELEMENT_SIZE_B);
+			ablake2b4rounds_update(&state_ref, blockhash_ref_bytes, ARGON2_BLOCK_SIZE);
+			uint8_t digest_ref[MERKLE_TREE_ELEMENT_SIZE_B];
+			ablake2b4rounds_final(&state_ref, digest_ref, sizeof(digest_ref));
+			MerkleTree::Buffer hash_ref = MerkleTree::Buffer(digest_ref, digest_ref + sizeof(digest_ref));
+			clear_internal_memory(blockhash_ref.v, ARGON2_BLOCK_SIZE);
+			clear_internal_memory(blockhash_ref_bytes, ARGON2_BLOCK_SIZE);
+ 
+			CDataStream MyStreamRef(4, 8);
+			MyStreamRef.clear();
+			Serialize(MyStreamRef, TheTree.getProofOrdered(hash_ref, ref_index + 1), 4, 8);
+			for (int i = 0; i<MyStreamRef.size(); i++) {
+				unsigned char Machin = MyStreamRef[i];
+				nProofMTP[(j * 3 - 1) * 375 + i] = Machin;
+				//		printf("MyStream %02x %02x machin %02x\n",MyStream[i]&0xff, TheNewString[i],Machin);
+			}
+
 
 
 /////////////////////////////////////////////////////////////////////
@@ -587,157 +565,75 @@ if (instance->memory[ij].ref_block != TheBlockIndex[1])
 		}
 
 		if (init_blocks) {
-			//                printf("Step 5.1 : init_blocks \n");
+ 
 			return 0;
 		}
-		//			printf("coming here 2\n");
-		if (unmatch_block) {
-			//                printf("Step 5.2 : unmatch_block \n");
-			return 0;
-		}
-		//			printf("coming here 3\n");
+
+ 
 		char hex_tmp[64];
-		/*
-		for (int n = 0; n < 32; n++) {
-		//				printf(" %02x ", Y[L][n]);
-		sprintf(&hex_tmp[n * 2], "%02x", ((unsigned char*)&Y)[n]);
-		}
-		*/
-		if (Y[L].trim256() > hashTarget) {
+ 
+		if (Y[L] > hashTarget) {
 
 		}
 		else {
-
 			// Found a solution
-			printf("****************************************************Current hash: Nonce=%08x\n", TheNonce);
-			printf("Found a solution. Hash:");
+			printf("Found a solution. Nonce=%08x Hash:",TheNonce);
 			for (int n = 0; n < 32; n++) {
-				printf("%02x", ((unsigned char*)&Y[L])[n]);
+				printf("%02x", ((unsigned char*)&Y[0])[n]);
 			}
 			printf("\n");
-			for (int n = 0; n < 8; n++) {
-				printf(" %08x ", ((uint32_t*)&Y[L])[n]);
-				//                sprintf(&hex_tmp[n * 2], "%02x", Y[L][n]);
-			}
-			printf("\n");
-			// TODO: copy hash to output
-			//				memcpy(output, Y[L], 32);
-			printf("Y[L] = %s\n", Y[L].trim256().GetHex().c_str());
 			return 1;
-			//printf("O-2\n");
+
+
 		}
-		//printf("O-3\n");
-
-		//		} // while(true)
-		//printf("O-4\n");
+ 
 	}
-	//printf("O-5\n");
-
-
+ 
 
 	return 0;
 }
 
-int mtp_init(uint32_t TheNonce, argon2_instance_t *instance, unsigned int d, uint256 &resultMerkleRoot) {
+MerkleTree::Elements mtp_init_withtree( argon2_instance_t *instance, uint8_t *resultMerkleRoot) {
 	//internal_kat(instance, r); /* Print all memory blocks */
 	printf("Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory \n");
 	// Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory
-
-	if (instance != NULL) {
-		printf("Step 2 : Compute the root Φ of the Merkle hash tree \n");
-//		vector<char*> leaves((instance->context_ptr->m_cost)); // 2gb
-		vector<uint256> leaves(0); // 2gb
-		for (int i = 0; i < instance->memory_blocks; ++i) {
-			block blockhash;
-			uint8_t blockhash_bytes[ARGON2_BLOCK_SIZE];
-			copy_block(&blockhash, &instance->memory[i]);
-			store_block(&blockhash_bytes, &blockhash);
-			// hash each block with sha256
-/*
-			SHA256_CTX ctx;
-			SHA256_Init(&ctx);
-			uint256 hashBlock;
-			SHA256_Update(&ctx, blockhash_bytes, ARGON2_BLOCK_SIZE);
-			SHA256_Final((unsigned char*)&hashBlock, &ctx);
-*/
-			uint512 hashBlock;
-			ablake2b_state ctx;
-			ablake2b_init(&ctx, ARGON2_PREHASH_DIGEST_LENGTH);
-			ablake2b_update(&ctx, blockhash_bytes, ARGON2_BLOCK_SIZE);
-			ablake2b_final(&ctx, (unsigned char*)&hashBlock, ARGON2_PREHASH_DIGEST_LENGTH);
-
-			leaves.push_back(hashBlock.trim256());
-
-		
-		}
-
-		//		mt_hash_t resultMerkleRoot;
-		int ret;
-//		ret = mt_get_root(mt, resultMerkleRoot);
-
-printf("after main loop\n");
-		merkletree mtree = merkletree(leaves);
-
-	//	leaves.clear();
-printf("after merkletree \n");
-		resultMerkleRoot = mtree.root();
-
-
-printf("after obtening the root\n");
-	}
-
-		return 1;
-
-}
-//
-merkletree mtp_init_withtree( argon2_instance_t *instance, uint256 &resultMerkleRoot) {
-	//internal_kat(instance, r); /* Print all memory blocks */
-	printf("Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory \n");
-	// Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory
-	merkletree mtree;
+	
+	MerkleTree::Elements elements;
 	if (instance != NULL) {
 		printf("Step 2 : Compute the root Φ of the Merkle hash tree \n");
 		//		vector<char*> leaves((instance->context_ptr->m_cost)); // 2gb
-		vector<uint256> leaves(0); // 2gb
+	
 		for (int i = 0; i < instance->memory_blocks; ++i) {
 			block blockhash;
 			uint8_t blockhash_bytes[ARGON2_BLOCK_SIZE];
 			copy_block(&blockhash, &instance->memory[i]);
 			store_block(&blockhash_bytes, &blockhash);
-			// hash each block with sha256
-/*
-			SHA256_CTX ctx;
-			SHA256_Init(&ctx);
-			//			uint8_t hashBlock[32];
-			uint256 hashBlock;
-			SHA256_Update(&ctx, blockhash_bytes, ARGON2_BLOCK_SIZE);
-			SHA256_Final((unsigned char*)&hashBlock, &ctx);
-*/
-			// add element to merkel tree
-			//			char* out_buff = (char*)hashBlock;
-			//			uint256 output(out_buff);
-			uint512 hashBlock;
+
+//			uint512 hashBlock;
 			ablake2b_state ctx;
-			ablake2b_init(&ctx, ARGON2_PREHASH_DIGEST_LENGTH);
-			ablake2b_update(&ctx, blockhash_bytes, ARGON2_BLOCK_SIZE);
-			ablake2b_final(&ctx, (unsigned char*)&hashBlock, ARGON2_PREHASH_DIGEST_LENGTH);
+			ablake2b_init(&ctx, MERKLE_TREE_ELEMENT_SIZE_B);
+			ablake2b4rounds_update(&ctx, blockhash_bytes, ARGON2_BLOCK_SIZE);
+			uint8_t digest[MERKLE_TREE_ELEMENT_SIZE_B];
+			ablake2b4rounds_final(&ctx, digest, sizeof(digest));
+			MerkleTree::Buffer hash_digest = MerkleTree::Buffer(digest, digest + sizeof(digest));
+			elements.push_back(hash_digest);
 
-			leaves.push_back(hashBlock.trim256());
-
+			clear_internal_memory(blockhash.v, ARGON2_BLOCK_SIZE);
+			clear_internal_memory(blockhash_bytes, ARGON2_BLOCK_SIZE);
 
 		}
+/*
+		MerkleTree ordered_tree(elements, true);
 
-		//		mt_hash_t resultMerkleRoot;
-		int ret;
-		//		ret = mt_get_root(mt, resultMerkleRoot);
+		MerkleTree::Buffer root = ordered_tree.getRoot();
+		std::copy(root.begin(), root.end(), resultMerkleRoot);
+*/
 
-		mtree = merkletree(leaves);
-
-		//	leaves.clear();
-		resultMerkleRoot = mtree.root();
+		printf("end Step 2 : Compute the root Φ of the Merkle hash tree \n");
+		return elements;
 	}
 
-	return mtree;
+	
 
 }
 //

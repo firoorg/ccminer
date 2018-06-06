@@ -53,12 +53,6 @@ struct upload_buffer {
 	size_t		pos;
 };
 
-struct upload_buffer_mtp {
-	char	buf[2*(1*5074)+1];
-	size_t		len;
-	size_t		pos;
-};
-
 struct header_info {
 	char		*lp_path;
 	char		*reason;
@@ -569,7 +563,7 @@ static json_t *json_rpc_call(CURL *curl, const char *url,
 	res_val = json_object_get(val, "result");
 	err_val = json_object_get(val, "error");
 
-	if (!res_val || json_is_null(res_val) ||
+	if (!res_val || /*json_is_null(res_val) ||*/
 	    (err_val && !json_is_null(err_val))) {
 		char *s = NULL;
 
@@ -620,212 +614,6 @@ err_out:
 	return NULL;
 }
 
-static json_t *json_rpc_call_mtp(CURL *curl, const char *url,
-	const char *userpass, const char *rpc_req,
-	bool longpoll_scan, bool longpoll, bool keepalive, int *curl_err)
-{
-	json_t *val, *err_val, *res_val;
-	int rc;
-	struct data_buffer all_data = { 0 };
-printf(" coming here \n");
-	struct upload_buffer_mtp *upload_data = (struct upload_buffer_mtp *)malloc(sizeof(struct upload_buffer_mtp));
-
-	json_error_t err;
-	struct curl_slist *headers = NULL;
-	char *httpdata = (char*)malloc(2*1*5074+1);
-	char len_hdr[64], hashrate_hdr[64];
-	char curl_err_str[CURL_ERROR_SIZE] = { 0 };
-	long timeout = longpoll ? opt_timeout : opt_timeout / 2;
-	struct header_info hi = { 0 };
-	bool lp_scanning = longpoll_scan && !have_longpoll;
-
-	printf(" coming here 2\n");
-	/* it is assumed that 'curl' is freshly [re]initialized at this pt */
-
-	if (opt_protocol)
-		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
-	curl_easy_setopt(curl, CURLOPT_URL, url);
-	if (opt_cert) {
-		curl_easy_setopt(curl, CURLOPT_CAINFO, opt_cert);
-		// ignore CN domain name, allow to move cert files
-		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
-	}
-	printf(" coming here 2.1\n");
-	curl_easy_setopt(curl, CURLOPT_ENCODING, "");
-	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 0);
-	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-	curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, all_data_cb);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &all_data);
-	curl_easy_setopt(curl, CURLOPT_READFUNCTION, upload_data_cb);
-	curl_easy_setopt(curl, CURLOPT_READDATA, &upload_data);
-
-	printf(" coming here 2.2\n");
-
-#if LIBCURL_VERSION_NUM >= 0x071200
-	curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, &seek_data_cb);
-	curl_easy_setopt(curl, CURLOPT_SEEKDATA, &upload_data);
-#endif
-	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, curl_err_str);
-	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
-	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, resp_hdr_cb);
-	curl_easy_setopt(curl, CURLOPT_HEADERDATA, &hi);
-	printf(" coming here 2.3\n");
-	if (opt_proxy) {
-		curl_easy_setopt(curl, CURLOPT_PROXY, opt_proxy);
-		curl_easy_setopt(curl, CURLOPT_PROXYTYPE, opt_proxy_type);
-	}
-	if (userpass) {
-		curl_easy_setopt(curl, CURLOPT_USERPWD, userpass);
-		curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-	}
-	printf(" coming here 2.4\n");
-#if LIBCURL_VERSION_NUM >= 0x070f06
-	if (keepalive)
-		curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, sockopt_keepalive_cb);
-#endif
-	printf(" coming here 2.5\n");
-	curl_easy_setopt(curl, CURLOPT_POST, 1);
-	printf(" coming here 2.6\n");
-//	if (opt_protocol)
-//		applog(LOG_DEBUG, "JSON protocol request:\n%s", rpc_req);
-	printf(" coming here 3\n");
-for (int i=0;i<2*(1*5074)+1;i++)
-	upload_data->buf[i] = rpc_req[i];
-
-printf(" coming here 4\n");
-
-	upload_data->len = strlen(rpc_req);
-	upload_data->pos = 0;
-	sprintf(len_hdr, "Content-Length: %lu", (unsigned long)upload_data->len);
-	sprintf(hashrate_hdr, "X-Mining-Hashrate: %llu", (unsigned long long) global_hashrate);
-
-	headers = curl_slist_append(headers, "Content-Type: application/json");
-	headers = curl_slist_append(headers, len_hdr);
-	headers = curl_slist_append(headers, "User-Agent: " USER_AGENT);
-	headers = curl_slist_append(headers, "X-Mining-Extensions: longpoll noncerange reject-reason");
-	headers = curl_slist_append(headers, hashrate_hdr);
-	headers = curl_slist_append(headers, "Accept:"); /* disable Accept hdr*/
-	headers = curl_slist_append(headers, "Expect:"); /* disable Expect hdr*/
-	printf(" coming here 5\n");
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-	printf(" coming here 6\n");
-	rc = curl_easy_perform(curl);
-	if (curl_err != NULL)
-		*curl_err = rc;
-	if (rc) {
-		if (!(longpoll && rc == CURLE_OPERATION_TIMEDOUT)) {
-			applog(LOG_ERR, "HTTP request failed: %s", curl_err_str);
-			goto err_out;
-		}
-	}
-
-	/* If X-Stratum was found, activate Stratum */
-	if (want_stratum && hi.stratum_url &&
-		!strncasecmp(hi.stratum_url, "stratum+tcp://", 14) &&
-		!(opt_proxy && opt_proxy_type == CURLPROXY_HTTP)) {
-		have_stratum = true;
-		tq_push(thr_info[stratum_thr_id].q, hi.stratum_url);
-		hi.stratum_url = NULL;
-	}
-
-	/* If X-Long-Polling was found, activate long polling */
-	if (lp_scanning && hi.lp_path && !have_stratum) {
-		have_longpoll = true;
-		tq_push(thr_info[longpoll_thr_id].q, hi.lp_path);
-		hi.lp_path = NULL;
-	}
-
-	if (!all_data.buf || !all_data.len) {
-		if (!have_longpoll) // seems normal on longpoll timeout
-			applog(LOG_ERR, "Empty data received in json_rpc_call.");
-		goto err_out;
-	}
-printf("coming here before httpdata\n");
-	httpdata = (char*)all_data.buf;
-
-	if (*httpdata != '{' && *httpdata != '[') {
-		long errcode = 0;
-		CURLcode c = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &errcode);
-		if (c == CURLE_OK && errcode == 401) {
-			applog(LOG_ERR, "You are not authorized, check your login and password.");
-			goto err_out;
-		}
-	}
-
-	val = JSON_LOADS(httpdata, &err);
-	if (!val) {
-		applog(LOG_ERR, "JSON decode failed(%d): %s", err.line, err.text);
-		if (opt_protocol)
-			applog(LOG_DEBUG, "%s", httpdata);
-		goto err_out;
-	}
-
-	if (opt_protocol) {
-		char *s = json_dumps(val, JSON_INDENT(3));
-		applog(LOG_DEBUG, "JSON protocol response:\n%s\n", s);
-		free(s);
-	}
-
-	/* JSON-RPC valid response returns a non-null 'result',
-	* and a null 'error'. */
-	res_val = json_object_get(val, "result");
-	err_val = json_object_get(val, "error");
-
-	if (!res_val || json_is_null(res_val) ||
-		(err_val && !json_is_null(err_val))) {
-		char *s = NULL;
-
-		if (err_val) {
-			s = json_dumps(err_val, 0);
-			json_t *msg = json_object_get(err_val, "message");
-			json_t *err_code = json_object_get(err_val, "code");
-			if (curl_err && json_integer_value(err_code))
-				*curl_err = (int)json_integer_value(err_code);
-
-			if (json_is_string(msg)) {
-				free(s);
-				s = strdup(json_string_value(msg));
-				if (have_longpoll && s && !strcmp(s, "method not getwork")) {
-					json_decref(err_val);
-					free(s);
-					goto err_out;
-				}
-			}
-			json_decref(err_val);
-		}
-		else
-			s = strdup("(unknown reason)");
-
-		if (!curl_err || opt_debug)
-			applog(LOG_ERR, "JSON-RPC call failed: %s", s);
-
-		free(s);
-
-		goto err_out;
-	}
-
-	if (hi.reason)
-		json_object_set_new(val, "reject-reason", json_string(hi.reason));
-
-	databuf_free(&all_data);
-	curl_slist_free_all(headers);
-	curl_easy_reset(curl);
-	return val;
-
-err_out:
-	
-	free(hi.lp_path);
-	free(hi.reason);
-	free(hi.stratum_url);
-	databuf_free(&all_data);
-	curl_slist_free_all(headers);
-	curl_easy_reset(curl);
-	return NULL;
-}
-
-
 /* getwork calls with pool pointer (wallet/longpoll pools) */
 json_t *json_rpc_call_pool(CURL *curl, struct pool_infos *pool, const char *req,
 	bool longpoll_scan, bool longpoll, int *curl_err)
@@ -837,16 +625,7 @@ json_t *json_rpc_call_pool(CURL *curl, struct pool_infos *pool, const char *req,
 
 	return json_rpc_call(curl, pool->url, userpass, req, longpoll_scan, false, false, curl_err);
 }
-json_t *json_rpc_call_pool_mtp(CURL *curl, struct pool_infos *pool, const char *req,
-	bool longpoll_scan, bool longpoll, int *curl_err)
-{
-	char userpass[512];
-	// todo, malloc and store that in pool array
-	snprintf(userpass, sizeof(userpass), "%s%c%s", pool->user,
-		strlen(pool->pass) ? ':' : '\0', pool->pass);
-printf("coming to json_rpc_call_mtp\n");
-	return json_rpc_call_mtp(curl, pool->url, userpass, req, longpoll_scan, false, false, curl_err);
-}
+
 /* called only from longpoll thread, we have the lp_url */
 json_t *json_rpc_longpoll(CURL *curl, char *lp_url, struct pool_infos *pool, const char *req, int *curl_err)
 {
@@ -941,6 +720,12 @@ void cbin2hex(char *out, const char *in, size_t len)
 	}
 }
 
+void dbin2hex(char *s, const unsigned char *p, size_t len)
+{
+	for (size_t i = 0; i < len; i++)
+		sprintf(s + (i * 2), "%02x", (unsigned int)p[i]);
+}
+
 char *bin2hex(const uchar *in, size_t len)
 {
 	char *s = (char*)malloc((len * 2) + 1);
@@ -951,17 +736,6 @@ char *bin2hex(const uchar *in, size_t len)
 
 	return s;
 }
-
-void bin2hex2(char* out,const uchar *in, size_t len)
-{
-//	char *s = (char*)malloc((len * 2) + 1);
-
-
-	cbin2hex(out, (const char *)in, len);
-
-	
-}
-
 
 bool hex2bin(void *output, const char *hexstr, size_t len)
 {
@@ -990,6 +764,165 @@ bool hex2bin(void *output, const char *hexstr, size_t len)
 
 	return (len == 0 && *hexstr == 0) ? true : false;
 }
+///// 
+
+int varint_encode(unsigned char *p, uint64_t n)
+{
+	int i;
+	if (n < 0xfd) {
+		p[0] = (uchar)n;
+		return 1;
+	}
+	if (n <= 0xffff) {
+		p[0] = 0xfd;
+		p[1] = n & 0xff;
+		p[2] = (uchar)(n >> 8);
+		return 3;
+	}
+	if (n <= 0xffffffff) {
+		p[0] = 0xfe;
+		for (i = 1; i < 5; i++) {
+			p[i] = n & 0xff;
+			n >>= 8;
+		}
+		return 5;
+	}
+	p[0] = 0xff;
+	for (i = 1; i < 9; i++) {
+		p[i] = n & 0xff;
+		n >>= 8;
+	}
+	return 9;
+}
+
+static const char b58digits[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+static bool b58dec(unsigned char *bin, size_t binsz, const char *b58)
+{
+	size_t i, j;
+	uint64_t t;
+	uint32_t c;
+	uint32_t *outi;
+	size_t outisz = (binsz + 3) / 4;
+	int rem = binsz % 4;
+	uint32_t remmask = 0xffffffff << (8 * rem);
+	size_t b58sz = strlen(b58);
+	bool rc = false;
+
+	outi = (uint32_t *)calloc(outisz, sizeof(*outi));
+
+	for (i = 0; i < b58sz; ++i) {
+		for (c = 0; b58digits[c] != b58[i]; c++)
+			if (!b58digits[c])
+				goto out;
+		for (j = outisz; j--; ) {
+			t = (uint64_t)outi[j] * 58 + c;
+			c = t >> 32;
+			outi[j] = t & 0xffffffff;
+		}
+		if (c || outi[0] & remmask)
+			goto out;
+	}
+
+	j = 0;
+	switch (rem) {
+	case 3:
+		*(bin++) = (outi[0] >> 16) & 0xff;
+	case 2:
+		*(bin++) = (outi[0] >> 8) & 0xff;
+	case 1:
+		*(bin++) = outi[0] & 0xff;
+		++j;
+	default:
+		break;
+	}
+	for (; j < outisz; ++j) {
+		be32enc((uint32_t *)bin, outi[j]);
+		bin += sizeof(uint32_t);
+	}
+
+	rc = true;
+out:
+	free(outi);
+	return rc;
+}
+
+static int b58check(unsigned char *bin, size_t binsz, const char *b58)
+{
+	unsigned char buf[32];
+	int i;
+
+	sha256d(buf, bin, (int)(binsz - 4));
+	if (memcmp(&bin[binsz - 4], buf, 4))
+		return -1;
+
+	/* Check number of zeros is correct AFTER verifying checksum
+	* (to avoid possibility of accessing the string beyond the end) */
+	for (i = 0; bin[i] == '\0' && b58[i] == '1'; ++i);
+	if (bin[i] == '\0' || b58[i] == '1')
+		return -3;
+
+	return bin[0];
+}
+
+
+bool jobj_binary(const json_t *obj, const char *key, void *buf, size_t buflen)
+{
+	const char *hexstr;
+	json_t *tmp;
+
+	tmp = json_object_get(obj, key);
+	if (unlikely(!tmp)) {
+		applog(LOG_ERR, "JSON key '%s' not found", key);
+		return false;
+	}
+	hexstr = json_string_value(tmp);
+	if (unlikely(!hexstr)) {
+		applog(LOG_ERR, "JSON key '%s' is not a string", key);
+		return false;
+	}
+	if (!hex2bin((uchar*)buf, hexstr, buflen))
+		return false;
+
+	return true;
+}
+
+
+size_t address_to_script(unsigned char *out, size_t outsz, const char *addr)
+{
+	unsigned char addrbin[25];
+	int addrver;
+	size_t rv;
+
+	if (!b58dec(addrbin, sizeof(addrbin), addr))
+		return 0;
+	addrver = b58check(addrbin, sizeof(addrbin), addr);
+	if (addrver < 0)
+		return 0;
+	switch (addrver) {
+	case 5:    /* Bitcoin script hash */
+	case 196:  /* Testnet script hash */
+		if (outsz < (rv = 23))
+			return rv;
+		out[0] = 0xa9;  /* OP_HASH160 */
+		out[1] = 0x14;  /* push 20 bytes */
+		memcpy(&out[2], &addrbin[1], 20);
+		out[22] = 0x87;  /* OP_EQUAL */
+		return rv;
+	default:
+		if (outsz < (rv = 25))
+			return rv;
+		out[0] = 0x76;  /* OP_DUP */
+		out[1] = 0xa9;  /* OP_HASH160 */
+		out[2] = 0x14;  /* push 20 bytes */
+		memcpy(&out[3], &addrbin[1], 20);
+		out[23] = 0x88;  /* OP_EQUALVERIFY */
+		out[24] = 0xac;  /* OP_CHECKSIG */
+		return rv;
+	}
+}
+
+
 
 /* Subtract the `struct timeval' values X and Y,
    storing the result in RESULT.
@@ -1079,70 +1012,10 @@ void diff_to_target(uint32_t *target, double diff)
 	}
 }
 
-void set_target(unsigned char *dest_target, double diff, double diff_multiplier2)
-{
-static const double truediffone = 26959535291011309493156476344723991336010898738574164086137773096960.0;
-static const double bits192 = 6277101735386680763835789423207666416102355444464034512896.0;
-static const double bits128 = 340282366920938463463374607431768211456.0;
-static const double bits64 = 18446744073709551616.0;
-
-#define htole64(x) (x)
-	unsigned char target[32];
-	uint64_t *data64, h64;
-	double d64, dcut64;
-
-	if (unlikely(diff == 0.0)) {
-
-		diff = 1.0;
-	}
-
-	d64 = diff_multiplier2 * truediffone;
-	d64 /= diff;
-
-	dcut64 = d64 / bits192;
-	h64 = dcut64;
-	data64 = (uint64_t *)(target + 24);
-	*data64 = htole64(h64);
-	dcut64 = h64;
-	dcut64 *= bits192;
-	d64 -= dcut64;
-
-	dcut64 = d64 / bits128;
-	h64 = dcut64;
-	data64 = (uint64_t *)(target + 16);
-	*data64 = htole64(h64);
-	dcut64 = h64;
-	dcut64 *= bits128;
-	d64 -= dcut64;
-
-	dcut64 = d64 / bits64;
-	h64 = dcut64;
-	data64 = (uint64_t *)(target + 8);
-	*data64 = htole64(h64);
-	dcut64 = h64;
-	dcut64 *= bits64;
-	d64 -= dcut64;
-
-	h64 = d64;
-	data64 = (uint64_t *)(target);
-	*data64 = htole64(h64);
-
-	if (opt_debug) {
-		char *htarget = bin2hex(target, 32);
-
-		free(htarget);
-	}
-	memcpy(dest_target, target, 32);
-
-#undef htole64
-}
-
-
 // Only used by stratum pools
 void work_set_target(struct work* work, double diff)
 {
-//	diff_to_target(work->target, diff);
-	set_target((unsigned char*)work->target,diff,1);
+	diff_to_target(work->target, diff);
 	work->targetdiff = diff;
 }
 
@@ -2593,13 +2466,13 @@ void print_hash_tests(void)
 
 	qubithash(&hash[0], &buf[0]);
 	printpfx("qubit", hash);
+/*
+	scrypthash(&hash[0], &buf[0]);
+	printpfx("scrypt", hash);
 
-//	scrypthash(&hash[0], &buf[0]);
-//	printpfx("scrypt", hash);
-
-//	scryptjane_hash(&hash[0], &buf[0]);
-//	printpfx("scrypt-jane", hash);
-
+	scryptjane_hash(&hash[0], &buf[0]);
+	printpfx("scrypt-jane", hash);
+*/
 	sibhash(&hash[0], &buf[0]);
 	printpfx("sib", hash);
 

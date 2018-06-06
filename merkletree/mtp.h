@@ -7,11 +7,11 @@
 
 #endif //ZCOIN_MTP_H
 
-//#include "main.h"
-//#include "merkletree/merkletree.h"
-#include "bignum.hpp"
-#include "merkletree.hpp"
-//#include <immintrin.h>
+
+
+#include "merkle-tree.hpp"
+
+#include <immintrin.h>
 #include "argon2ref/core.h"
 #include "argon2ref/argon2.h"
 #include "argon2ref/thread.h"
@@ -23,13 +23,13 @@
 #include "openssl\sha.h"
 
 #include "uint256.h"
-
+//#include "serialize.h"
 class CBlock;
 
 /* Size of MTP proof */
-const unsigned int MTP_PROOF_SIZE = 1431;
+const unsigned int MTP_PROOF_SIZE = 1471;// 1431;
 /* Size of MTP block proof size */
-const unsigned int MTP_BLOCK_PROOF_SIZE = 70;
+const unsigned int MTP_BLOCK_PROOF_SIZE = 72;
 /* Size of MTP block */
 const unsigned int MTP_BLOCK_SIZE = 140;
 
@@ -52,9 +52,13 @@ typedef struct mtp_Proof_ {
 
 void mtp_hash(char* output, const char* input, unsigned int d, uint32_t TheNonce);
 argon2_context init_argon2d_param(const char* input);
+void getblockindex(uint32_t ij, argon2_instance_t *instance, uint32_t *out_ij_prev, uint32_t *out_computed_ref_block);
 
-void getBlockIndex(uint32_t ij, argon2_instance_t *instance, uint32_t *Index);
+//int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigned int d, block_mtpProof *output,
+// uint8_t *resultMerkleRoot, MerkleTree TheTree,uint32_t* input, uint256 hashTarget);
 
-int mtp_init(uint32_t TheNonce, argon2_instance_t *instance, unsigned int d, uint256 &resultMerkleRoot);
-int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigned int d, block_mtpProof *output, uint256 resultMerkleRoot, merkletree TheTree, uint256 hashTarget);
-merkletree mtp_init_withtree(argon2_instance_t *instance,  uint256 &resultMerkleRoot);
+int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance,
+	blockS *nBlockMTP /*[72 * 2][128]*/, unsigned char *nProofMTP, uint8_t* resultMerkleRoot,
+	MerkleTree TheTree, uint32_t* input, uint256 hashTarget);
+
+MerkleTree::Elements mtp_init_withtree(argon2_instance_t *instance,  uint8_t *resultMerkleRoot);

@@ -472,6 +472,26 @@ static __device__ __inline__ void ldg4(const uint28 *ptr, uint28 *ret)
 }
 
 #endif /* __CUDA_ARCH__ < 320 */
+static __forceinline__ __device__ uint4 swapvec(const uint4 &buf)
+{
+	uint4 vec;
+	vec.x = cuda_swab32(buf.x);
+	vec.y = cuda_swab32(buf.y);
+	vec.z = cuda_swab32(buf.z);
+	vec.w = cuda_swab32(buf.w);
+	return vec;
+}
+
+static __forceinline__ __device__ uint4 swapvec(const uint4 *buf)
+{
+	uint4 vec;
+	vec.x = cuda_swab32(buf[0].x);
+	vec.y = cuda_swab32(buf[0].y);
+	vec.z = cuda_swab32(buf[0].z);
+	vec.w = cuda_swab32(buf[0].w);
+	return vec;
+}
+
 
 
 static __forceinline__ __device__ uint8 swapvec(const uint8 &buf)

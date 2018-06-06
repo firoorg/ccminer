@@ -14,7 +14,7 @@
 #define __CUDA_ARCH__ 500
 #endif
 
-#define TPB 64
+#define TPB 32
 
 #if __CUDA_ARCH__ >= 500
 
@@ -26,18 +26,11 @@
 
 __device__ uint2x4 *DMatrix;
 
-__device__ __forceinline__ uint2 LD4S_old(const int index)
-{
-	extern __shared__ uint2 shared_mem[];
-	return shared_mem[(index * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x];
-}
-
 __device__ __forceinline__ uint2 LD4S(const int index)
 {
 	extern __shared__ uint2 shared_mem[];
 	return shared_mem[(index * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x];
 }
-
 
 __device__ __forceinline__ void ST4S(const int index, const uint2 data)
 {
@@ -360,17 +353,8 @@ void lyra2v2_gpu_hash_32_1(uint32_t threads, uint2 *inputHash)
 		DMatrix[blockDim.x * gridDim.x * 1 + thread] = state[1];
 		DMatrix[blockDim.x * gridDim.x * 2 + thread] = state[2];
 		DMatrix[blockDim.x * gridDim.x * 3 + thread] = state[3];
-
-		if (thread == 0)
-			printf("32_1 kernel indice 0 %d indice 1 %d indice 2 %d indice3 %d \n", blockDim.x * gridDim.x * 0 + thread,4*( blockDim.x * gridDim.x * 1 + thread), 4*(blockDim.x * gridDim.x * 2 + thread),
-4*(blockDim.x * gridDim.x * 3 + thread));
-
-
-
 	}
 }
-
-
 
 __global__
 __launch_bounds__(TPB, 1)
@@ -381,10 +365,6 @@ void lyra2v2_gpu_hash_32_2(uint32_t threads)
 	if (thread < threads)
 	{
 		uint2 state[4];
-if (thread==0)
-	printf("32_2 kernel          indice 0 %d indice 1 %d indice 2 %d indice3 %d \n", (0 * gridDim.x * blockDim.y + thread) * blockDim.x + threadIdx.x, (1 * gridDim.x * blockDim.y + thread) * blockDim.x + threadIdx.x, 
-															    (2 * gridDim.x * blockDim.y + thread) * blockDim.x + threadIdx.x, (3 * gridDim.x * blockDim.y + thread) * blockDim.x + threadIdx.x);
-
 		state[0] = ((uint2*)DMatrix)[(0 * gridDim.x * blockDim.y + thread) * blockDim.x + threadIdx.x];
 		state[1] = ((uint2*)DMatrix)[(1 * gridDim.x * blockDim.y + thread) * blockDim.x + threadIdx.x];
 		state[2] = ((uint2*)DMatrix)[(2 * gridDim.x * blockDim.y + thread) * blockDim.x + threadIdx.x];
@@ -411,46 +391,6 @@ if (thread==0)
 		((uint2*)DMatrix)[(3 * gridDim.x * blockDim.y + thread) * blockDim.x + threadIdx.x] = state[3];
 	}
 }
-
-__global__
-__launch_bounds__(TPB, 1)
-void lyra2v2_gpu_hash_32_2_v2(uint32_t threads)
-{
-	const uint32_t thread = blockDim.y * blockIdx.x + threadIdx.y;
-
-	if (thread < threads)
-	{
-		uint2 state[4];
-
-		state[0] = ((uint2*)DMatrix)[4 * thread + threadIdx.x % 4];
-		state[1] = ((uint2*)DMatrix)[4 * thread + threadIdx.x % 4  + 1];
-		state[2] = ((uint2*)DMatrix)[4 * thread + threadIdx.x % 4  + 2];
-		state[3] = ((uint2*)DMatrix)[4 * thread + threadIdx.x % 4  + 3];
-
-		reduceDuplexRowSetup2(state);
-
-		uint32_t rowa;
-		int prev = 3;
-
-		for (int i = 0; i < 3; i++)
-		{
-			rowa = __shfl(state[0].x, 0, 4) & 3;
-			reduceDuplexRowt2(prev, rowa, i, state);
-			prev = i;
-		}
-
-		rowa = __shfl(state[0].x, 0, 4) & 3;
-		reduceDuplexRowt2x4(rowa, state);
-
-		((uint2*)DMatrix)[4 * thread + threadIdx.x % 4 + 0] = state[0];
-		((uint2*)DMatrix)[4 * thread + threadIdx.x % 4 + 1] = state[1];
-		((uint2*)DMatrix)[4 * thread + threadIdx.x % 4 + 2] = state[2];
-		((uint2*)DMatrix)[4 * thread + threadIdx.x % 4 + 3] = state[3];
-	}
-}
-
-
-
 
 __global__
 __launch_bounds__(TPB, 1)
@@ -484,9 +424,7 @@ __device__ void* DMatrix;
 #endif
 __global__ void lyra2v2_gpu_hash_32_1(uint32_t threads, uint2 *inputHash) {}
 __global__ void lyra2v2_gpu_hash_32_2(uint32_t threads) {}
-__global__ void lyra2v2_gpu_hash_32_2_v2(uint32_t threads) {}
 __global__ void lyra2v2_gpu_hash_32_3(uint32_t threads, uint2 *outputHash) {}
-
 #endif
 
 

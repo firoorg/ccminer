@@ -88,20 +88,20 @@
     <Filter Include="Source Files\CUDA\m7">
       <UniqueIdentifier>{5fe8f481-cc9d-4a07-a7e1-1af2ee79cca3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\MerkleTree">
+      <UniqueIdentifier>{e500e339-5de9-4cc0-bf85-f214415af49b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\MerkleTree">
+      <UniqueIdentifier>{a908b22d-33af-4d2d-8e05-4741b5989fb3}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Header Files\argon2ref">
-      <UniqueIdentifier>{7d3ade55-cdb9-4887-82e5-3ccdc55a7365}</UniqueIdentifier>
+      <UniqueIdentifier>{ae5587de-0999-41d7-a098-00e7f8d0eb3e}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\argon2ref">
-      <UniqueIdentifier>{61988e77-40fd-4911-ae5b-b4d9c0e8c1a4}</UniqueIdentifier>
+      <UniqueIdentifier>{28c131c2-7754-4c89-8c50-68f5f2acc681}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\mtp">
-      <UniqueIdentifier>{97946d9f-23b4-4f61-b62d-bbdd276dfb8d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\mtp">
-      <UniqueIdentifier>{a366fb33-7d8e-4c62-b764-158c5167e71a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\CUDA\cuda_mtp">
-      <UniqueIdentifier>{583c336c-c65a-48bd-ad77-1eb162e27ec5}</UniqueIdentifier>
+    <Filter Include="Source Files\CUDA\mtp">
+      <UniqueIdentifier>{2a7f411a-9f6d-47bf-b5ac-ef7836f8712c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -291,7 +291,19 @@
     <ClCompile Include="sph\tiger.c">
       <Filter>Source Files\sph</Filter>
     </ClCompile>
+    <ClCompile Include="base58.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="merkletree\mtp.cpp">
+      <Filter>Source Files\MerkleTree</Filter>
+    </ClCompile>
+    <ClCompile Include="merkletree\merkle-tree.cpp">
+      <Filter>Source Files\MerkleTree</Filter>
+    </ClCompile>
     <ClCompile Include="argon2ref\argon2.c">
+      <Filter>Source Files\argon2ref</Filter>
+    </ClCompile>
+    <ClCompile Include="argon2ref\blake2ba.c">
       <Filter>Source Files\argon2ref</Filter>
     </ClCompile>
     <ClCompile Include="argon2ref\core.c">
@@ -305,18 +317,6 @@
     </ClCompile>
     <ClCompile Include="argon2ref\thread.c">
       <Filter>Source Files\argon2ref</Filter>
-    </ClCompile>
-    <ClCompile Include="argon2ref\blake2ba.c">
-      <Filter>Source Files\argon2ref</Filter>
-    </ClCompile>
-    <ClCompile Include="merkletree\mtp.cpp">
-      <Filter>Source Files\mtp</Filter>
-    </ClCompile>
-    <ClCompile Include="merkletree\binarytree.cpp">
-      <Filter>Header Files\mtp</Filter>
-    </ClCompile>
-    <ClCompile Include="merkletree\merkletree.cpp">
-      <Filter>Header Files\mtp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -527,14 +527,11 @@
     <ClInclude Include="sph\sph_tiger.h">
       <Filter>Header Files\sph</Filter>
     </ClInclude>
-    <ClInclude Include="argon2ref\core.h">
-      <Filter>Header Files\argon2ref</Filter>
+    <ClInclude Include="merkletree\mtp.h">
+      <Filter>Header Files\MerkleTree</Filter>
     </ClInclude>
-    <ClInclude Include="argon2ref\encoding.h">
-      <Filter>Header Files\argon2ref</Filter>
-    </ClInclude>
-    <ClInclude Include="argon2ref\thread.h">
-      <Filter>Header Files\argon2ref</Filter>
+    <ClInclude Include="merkletree\merkle-tree.hpp">
+      <Filter>Header Files\MerkleTree</Filter>
     </ClInclude>
     <ClInclude Include="argon2ref\argon2.h">
       <Filter>Header Files\argon2ref</Filter>
@@ -551,17 +548,23 @@
     <ClInclude Include="argon2ref\blamka-round-ref.h">
       <Filter>Header Files\argon2ref</Filter>
     </ClInclude>
-    <ClInclude Include="merkletree\mtp.h">
-      <Filter>Header Files\mtp</Filter>
+    <ClInclude Include="argon2ref\core.h">
+      <Filter>Header Files\argon2ref</Filter>
     </ClInclude>
-    <ClInclude Include="merkletree\binarytree.hpp">
-      <Filter>Header Files\mtp</Filter>
+    <ClInclude Include="argon2ref\encoding.h">
+      <Filter>Header Files\argon2ref</Filter>
     </ClInclude>
-    <ClInclude Include="merkletree\merkletree.hpp">
-      <Filter>Header Files\mtp</Filter>
+    <ClInclude Include="argon2ref\thread.h">
+      <Filter>Header Files\argon2ref</Filter>
     </ClInclude>
     <ClInclude Include="cuda_mtp\cuda_sha256_helper.cuh">
-      <Filter>Source Files\CUDA\cuda_mtp</Filter>
+      <Filter>Source Files\CUDA\mtp</Filter>
+    </ClInclude>
+    <ClInclude Include="merkletree\serialize.h">
+      <Filter>Header Files\MerkleTree</Filter>
+    </ClInclude>
+    <ClInclude Include="merkletree\streams.h">
+      <Filter>Header Files\MerkleTree</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -844,11 +847,11 @@
     <CudaCompile Include="m7\m7_whirlpool512.cu">
       <Filter>Source Files\CUDA\m7</Filter>
     </CudaCompile>
-    <CudaCompile Include="cuda_mtp\mtp.cu">
-      <Filter>Source Files\CUDA\cuda_mtp</Filter>
-    </CudaCompile>
     <CudaCompile Include="cuda_mtp\cuda_mtp.cu">
-      <Filter>Source Files\CUDA\cuda_mtp</Filter>
+      <Filter>Source Files\CUDA\mtp</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuda_mtp\mtp.cu">
+      <Filter>Source Files\CUDA\mtp</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

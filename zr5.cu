@@ -264,8 +264,8 @@ void zr5_get_poks(int thr_id, uint32_t threads, uint16_t* d_poks, struct work* w
 		}
 		// create blocs to copy on device
 		for (uint8_t tx=0; tx < txs; tx++) {
-			txlens[tx] = (uint32_t) (work->txs[tx].len - 3U);
-			memcpy(&txdata[POK_MAX_TX_SZ*tx], work->txs[tx].data, min(POK_MAX_TX_SZ, txlens[tx]+3U));
+			txlens[tx] = (uint32_t) (work->txspok[tx].len - 3U);
+			memcpy(&txdata[POK_MAX_TX_SZ*tx], work->txspok[tx].data, min(POK_MAX_TX_SZ, txlens[tx]+3U));
 		}
 		cudaMemcpy(d_txs[thr_id], txdata, txs * POK_MAX_TX_SZ, cudaMemcpyHostToDevice);
 		CUDA_SAFE_CALL(cudaMemcpyToSymbol(c_txlens, txlens, txs * sizeof(uint32_t), 0, cudaMemcpyHostToDevice));

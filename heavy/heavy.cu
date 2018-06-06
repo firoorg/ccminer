@@ -141,8 +141,7 @@ struct check_nonce_for_remove
 static bool init[MAX_GPUS] = { 0 };
 
 __host__
-int scanhash_heavy(int thr_id, struct work *work, uint32_t max_nonce,
- unsigned long *hashes_done, uint32_t maxvote, int blocklen)
+int scanhash_heavy(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done, uint32_t maxvote, int blocklen)
 {
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;

@@ -585,9 +585,14 @@ extern void applog(int prio, const char *fmt, ...);
 extern void gpulog(int prio, int thr_id, const char *fmt, ...);
 void get_defconfig_path(char *out, size_t bufsize, char *argv0);
 extern void cbin2hex(char *out, const char *in, size_t len);
+
+extern void dbin2hex(char *s, const unsigned char *p, size_t len);
 extern char *bin2hex(const unsigned char *in, size_t len);
-extern void bin2hex2(char* out,const unsigned char *in, size_t len);
 extern bool hex2bin(void *output, const char *hexstr, size_t len);
+
+bool jobj_binary(const json_t *obj, const char *key, void *buf, size_t buflen);
+int varint_encode(unsigned char *p, uint64_t n);
+size_t address_to_script(unsigned char *out, size_t outsz, const char *addr);
 extern int timeval_subtract(struct timeval *result, struct timeval *x,
 	struct timeval *y);
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);
@@ -675,9 +680,7 @@ struct tx {
 #define mtp_block_num 140
 #define mtp_block_size 2471
 struct work {
-	uint32_t data[48]; // standard for ccminer
-//	uint32_t data[177622];
-
+	uint32_t data[48];
 	uint32_t target[8];
 	uint32_t maxvote;
 
@@ -699,19 +702,26 @@ struct work {
 	double targetdiff;
 
 	uint32_t height;
+	char *txs;
+	char *workid;
 
 	uint32_t scanned_from;
 	uint32_t scanned_to;
 
 	/* pok getwork txs */
 	uint32_t tx_count;
-	struct tx txs[POK_MAX_TXS];
-
+	struct tx txspok[POK_MAX_TXS];
 };
+
 
 struct mtp {
-	unsigned char mtpproof[((uint32_t)mtp_block_num)][((uint32_t)mtp_block_size)];
+	int MTPVersion;
+	unsigned char MerkleRoot[16];
+	uint64_t nBlockMTP[72*2][128];
+	unsigned char nProofMTP[72*3*375]; // largest estimate
+	uint32_t sizeProofMTP[72*3];
 };
+
 
 #define POK_BOOL_MASK 0x00008000
 #define POK_DATA_MASK 0xFFFF0000
@@ -766,6 +776,10 @@ extern struct pool_infos pools[MAX_POOLS];
 extern int num_pools;
 extern volatile int cur_pooln;
 
+/*************** base decode **********************/
+extern bool base58_decode(const char *input, char *output);
+extern void encode_tx_value(char *encoded, json_int_t value);
+extern void job_pack_tx(char *data, json_int_t amount, char *key);
 void pool_init_defaults(void);
 void pool_set_creds(int pooln);
 void pool_set_attr(int pooln, const char* key, char* arg);
@@ -778,10 +792,6 @@ void pool_dump_infos(void);
 
 json_t * json_rpc_call_pool(CURL *curl, struct pool_infos*,
 	const char *req, bool lp_scan, bool lp, int *err);
-
-json_t * json_rpc_call_pool_mtp(CURL *curl, struct pool_infos*,
-	const char *req, bool lp_scan, bool lp, int *err);
-
 json_t * json_rpc_longpoll(CURL *curl, char *lp_url, struct pool_infos*,
 	const char *req, int *err);
 

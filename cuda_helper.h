@@ -9,7 +9,6 @@
 #include <device_functions.h>
 #include <device_launch_parameters.h>
 #define __launch_bounds__(max_tpb, min_blocks)
-//#define atomicAdd(x,n)
 #endif
 
 #include <stdbool.h>
@@ -472,12 +471,14 @@ static __host__ __device__ __forceinline__ uint64_t devectorize(uint2 v) {
 #endif
 }
 
+
 /**
 * uint4 direct ops by c++ operator definitions
 **/
 static __device__ __forceinline__ uint4 operator+ (uint4 a, uint4 b) { return make_uint4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w); }
 static __device__ __forceinline__ uint4 operator^ (uint4 a, uint4 b) { return make_uint4(a.x ^ b.x, a.y ^ b.y, a.z ^ b.z, a.w ^ b.w); }
 static __device__ __forceinline__ void operator^= (uint4 &a, uint4 b) { a = a ^ b; }
+
 
 /**
  * uint2 direct ops by c++ operator definitions

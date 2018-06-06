@@ -36,6 +36,45 @@
  * @param with_xor Whether to XOR into the new block (1) or just overwrite (0)
  * @pre all block pointers must be valid
  */
+void getBlockIndex(uint32_t ij, argon2_instance_t *instance, uint32_t *Index)
+{
+	uint32_t ij_prev = 0;
+	if (ij%instance->lane_length == 0)
+		ij_prev = ij + instance->lane_length - 1;
+	else
+		ij_prev = ij - 1;
+
+	if (ij % instance->lane_length == 1)
+		ij_prev = ij - 1;
+
+	uint64_t prev_block_opening = instance->memory[ij_prev].v[0];
+	uint32_t ref_lane = (uint32_t)((prev_block_opening >> 32) % instance->lanes);
+
+	uint32_t pseudo_rand = (uint32_t)(prev_block_opening & 0xFFFFFFFF);
+
+	uint32_t Lane = ((ij) / instance->lane_length);
+	uint32_t Slice = (ij - (Lane * instance->lane_length)) / instance->segment_length;
+	uint32_t posIndex = ij - Lane * instance->lane_length - Slice * instance->segment_length;
+
+
+	uint32_t rec_ij = Slice*instance->segment_length + Lane *instance->lane_length + (ij % instance->segment_length);
+
+	if (Slice == 0)
+		ref_lane = Lane;
+
+
+	argon2_position_t position = { 0, Lane , (uint8_t)Slice, posIndex };
+
+	uint32_t ref_index = index_alpha(instance, &position, pseudo_rand, ref_lane == position.lane);
+
+	uint32_t computed_ref_block = instance->lane_length * ref_lane + ref_index;
+
+	Index[0] = ij_prev;
+	Index[1] = computed_ref_block;
+}
+
+
+
 static void fill_block(const block *prev_block, const block *ref_block,
                        block *next_block, int with_xor, uint32_t block_header[4]) {
     block blockR, block_tmp;
@@ -87,9 +126,9 @@ static void fill_block(const block *prev_block, const block *ref_block,
 }
 
 static void fill_block_withIndex(const block *prev_block, const block *ref_block,
-	block *next_block, int with_xor, uint32_t block_header[8], uint64_t index) {
+	block *next_block, int with_xor, uint32_t block_header[8], uint32_t index) {
 	block blockR, block_tmp;
-	uint64_t TheIndex[2] = {0,index};
+	uint32_t TheIndex[2] = {0,index};
 	unsigned i;
 
 	copy_block(&blockR, ref_block);
@@ -106,7 +145,7 @@ static void fill_block_withIndex(const block *prev_block, const block *ref_block
 	}
 	//	blockR.v[16] = ((uint64_t*)block_header)[0];
 	//	blockR.v[17] = ((uint64_t*)block_header)[1];
-	memcpy(&blockR.v[14], TheIndex, 2 * sizeof(uint64_t)); //index here
+	memcpy(&blockR.v[14], TheIndex,  sizeof(uint64_t)); //index here
 	memcpy(&blockR.v[16], (uint64_t*)block_header, 2 * sizeof(uint64_t));
 	memcpy(&blockR.v[18], (uint64_t*)(block_header + 4), 2 * sizeof(uint64_t));
 	//printf("block header in cpu %llx %llx %llx %llx\n", blockR.v[15], blockR.v[16], blockR.v[17], blockR.v[18]);
@@ -249,6 +288,12 @@ truc++;
         curr_block = instance->memory + curr_offset;
 		uint64_t TheBlockIndex = instance->lane_length * ref_lane + ref_index;
 
+//		uint32_t TheCompBlockIndex[2] = { 0 };
+//		getBlockIndex(curr_offset, instance, TheCompBlockIndex);
+
+//if (TheCompBlockIndex[1]!=(uint32_t)(TheBlockIndex & 0xFFFFFFFF))
+//printf("curr_offset = %d prev_offset = %d ref_block = %d \n", curr_offset ,prev_offset, instance->lane_length * ref_lane + ref_index);
+//	printf("computed value: prev_block %f ref_block %f prev_offset %f  Standard one %f\n", (double)TheCompBlockIndex[0], (double)TheCompBlockIndex[1],(double)prev_offset, (double)TheBlockIndex);
 
 /*
 		zRefBlock  = &instance->TheRefBlock + curr_offset;

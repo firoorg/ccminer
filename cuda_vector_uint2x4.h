@@ -10,7 +10,7 @@
 
 #include "cuda_helper.h"
 
-typedef struct __align__(64) uint2x4 {
+typedef struct __align__(16) uint2x4 {
 	uint2 x, y, z, w;
 } uint2x4;
 

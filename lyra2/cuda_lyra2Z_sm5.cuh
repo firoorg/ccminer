@@ -49,7 +49,7 @@ __device__ __forceinline__ void ST4S(const int index, const uint2 data)
 	shared_mem[(index * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x] = data;
 }
 
-#if __CUDA_ARCH__ == 300
+
 __device__ __forceinline__ uint32_t WarpShuffle(uint32_t a, uint32_t b, uint32_t c)
 {
 	return __shfl(a, b, c);
@@ -66,76 +66,6 @@ __device__ __forceinline__ void WarpShuffle3(uint2 &a1, uint2 &a2, uint2 &a3, ui
 	a2 = WarpShuffle(a2, b2, c);
 	a3 = WarpShuffle(a3, b3, c);
 }
-
-#else
-__device__ __forceinline__ uint32_t WarpShuffle(uint32_t a, uint32_t b, uint32_t c)
-{
-	extern __shared__ uint2 shared_mem[];
-
-	const uint32_t thread = blockDim.x * threadIdx.y + threadIdx.x;
-	uint32_t *_ptr = (uint32_t*)shared_mem;
-
-	__threadfence_block();
-	uint32_t buf = _ptr[thread];
-
-	_ptr[thread] = a;
-	__threadfence_block();
-	uint32_t result = _ptr[(thread&~(c - 1)) + (b&(c - 1))];
-
-	__threadfence_block();
-	_ptr[thread] = buf;
-
-	__threadfence_block();
-	return result;
-}
-
-__device__ __forceinline__ uint2 WarpShuffle(uint2 a, uint32_t b, uint32_t c)
-{
-	extern __shared__ uint2 shared_mem[];
-
-	const uint32_t thread = blockDim.x * threadIdx.y + threadIdx.x;
-
-	__threadfence_block();
-	uint2 buf = shared_mem[thread];
-
-	shared_mem[thread] = a;
-	__threadfence_block();
-	uint2 result = shared_mem[(thread&~(c - 1)) + (b&(c - 1))];
-
-	__threadfence_block();
-	shared_mem[thread] = buf;
-
-	__threadfence_block();
-	return result;
-}
-
-__device__ __forceinline__ void WarpShuffle3(uint2 &a1, uint2 &a2, uint2 &a3, uint32_t b1, uint32_t b2, uint32_t b3, uint32_t c)
-{
-	extern __shared__ uint2 shared_mem[];
-
-	const uint32_t thread = blockDim.x * threadIdx.y + threadIdx.x;
-
-	__threadfence_block();
-	uint2 buf = shared_mem[thread];
-
-	shared_mem[thread] = a1;
-	__threadfence_block();
-	a1 = shared_mem[(thread&~(c - 1)) + (b1&(c - 1))];
-	__threadfence_block();
-	shared_mem[thread] = a2;
-	__threadfence_block();
-	a2 = shared_mem[(thread&~(c - 1)) + (b2&(c - 1))];
-	__threadfence_block();
-	shared_mem[thread] = a3;
-	__threadfence_block();
-	a3 = shared_mem[(thread&~(c - 1)) + (b3&(c - 1))];
-
-	__threadfence_block();
-	shared_mem[thread] = buf;
-	__threadfence_block();
-}
-
-#endif
 
 
 

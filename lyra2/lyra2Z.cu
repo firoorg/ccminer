@@ -76,7 +76,7 @@ extern "C" int scanhash_lyra2Z(int thr_id, struct work* work, uint32_t max_nonce
 	if (!init[thr_id])
 	{
 		int dev_id = device_map[thr_id];
-		cudaSetDevice(dev_id); 
+		cudaSetDevice(dev_id);
 		CUDA_LOG_ERROR();
 		cudaDeviceReset();
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);

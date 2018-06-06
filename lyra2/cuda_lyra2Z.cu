@@ -927,7 +927,7 @@ uint32_t lyra2Z_getSecNonce(int thr_id, int num)
 	memset(results, 0xFF, sizeof(results));
 	cudaMemcpy(results, d_GNonces[thr_id], sizeof(results), cudaMemcpyDeviceToHost);
 	if (results[1] == results[0])
-				return UINT32_MAX;
+		return UINT32_MAX;
 	return results[num];
 }
 
