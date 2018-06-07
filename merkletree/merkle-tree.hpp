@@ -165,10 +165,9 @@ public :
      */
     std::string getProofOrderedHex(const Buffer& element, size_t index) const;
 	void getProofOrderedFormatHex(const Buffer& element, size_t index, unsigned char* TheUChar, int &sizeofuchar) const;
-	std::string MerkleTree::getProofOrderedFormatHex2(const Buffer& element,size_t index) const;
 	void GetProofSerialized(const Buffer& element, size_t index, unsigned char* mychar);
 	unsigned int GetSizeProofSerialized(const Buffer& element, size_t index) const;
-	void MerkleTree::Serialized(uint64_t& That, unsigned char* mychar);
+	
 
     /** Check the given proof for the given element
      *

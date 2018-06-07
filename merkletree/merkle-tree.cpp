@@ -128,31 +128,6 @@ std::string MerkleTree::getProofOrderedHex(const Buffer& element,
     return elementsToHex(getProofOrdered(element, index));
 }
 
-std::string MerkleTree::getProofOrderedFormatHex2(const Buffer& element,
-	size_t index) const
-{
-	char TheChar[1024];
-	std::string TheString;
-	stringstream sstream;
-	Elements TheElements = getProofOrdered(element, index);
-
-	int TheIt = 0;
-	for (MerkleTree::Elements::const_iterator it = TheElements.begin();
-		it != TheElements.end();
-		++it) {
-		std::vector<uint8_t> Truc = *it;
-		for (int i = 0; i< Truc.size(); i++) {
-			unsigned char TheUchar = Truc[i];
-			sprintf(&TheChar[2 * TheIt], "%02x", TheUchar);
-			//			printf(" %02x ", TheUchar);
-			TheIt++;
-		}
-	}
-	sstream << TheChar;
-	sstream >> TheString;
-return TheString;	
-}
-
 
 void MerkleTree::getProofOrderedFormatHex(const Buffer& element,
 	size_t index, unsigned char* TheUChar, int &sizeofuchar) const
@@ -356,16 +331,6 @@ void MerkleTree::GetProofSerialized(const Buffer& element, size_t index, unsigne
 //	return mychar;
 }
 
-void MerkleTree::Serialized(uint64_t& That,  unsigned char* mychar)
-{
-	//	std::iostream *ThatStream;
-
-	CDataStream MyStream(4, 4);
-
-	Serialize(MyStream, That, 4, 4);
-	MyStream >> mychar;
-	//	return mychar;
-}
 
 
 unsigned int MerkleTree::GetSizeProofSerialized(const Buffer& element, size_t index) const

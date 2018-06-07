@@ -5,9 +5,9 @@
 #ifndef BITCOIN_COMPAT_ENDIAN_H
 #define BITCOIN_COMPAT_ENDIAN_H
 
-#if defined(HAVE_CONFIG_H)
-#include "config/bitcoin-config.h"
-#endif
+//#if defined(HAVE_CONFIG_H)
+//#include "config/bitcoin-config.h"
+//#endif
 
 #include <stdint.h>
 
@@ -184,12 +184,12 @@ inline uint64_t be64toh(uint64_t big_endian_64bits)
 }
 #endif // HAVE_DECL_BE64TOH
 
-#if HAVE_DECL_LE64TOH == 0
-inline uint64_t le64toh(uint64_t little_endian_64bits)
-{
-    return little_endian_64bits;
-}
-#endif // HAVE_DECL_LE64TOH
+//#if HAVE_DECL_LE64TOH == 0
+//inline uint64_t le64toh(uint64_t little_endian_64bits)
+//{
+//    return little_endian_64bits;
+//}
+//#endif // HAVE_DECL_LE64TOH
 
 #endif // WORDS_BIGENDIAN
 

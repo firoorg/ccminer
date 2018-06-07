@@ -5,6 +5,10 @@
  * under the terms of the standard MIT license.  See COPYING for more details.
  */
 //#include <arpa/inet.h>
+#ifdef __GNUC__
+#include <arpa/inet.h>
+#endif
+
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -79,8 +83,12 @@ static bool _blkmk_b58tobin(void *bin, size_t binsz, const char *b58, size_t b58
 
 	for (; j < outisz; ++j)
 	{
-
+//MSVC
+#ifdef _MSC_VER 		
 		*((uint32_t*)binu) = _byteswap_ulong(outi[j]);
+#elif __GNUC__
+		*((uint32_t*)binu) = htonl(outi[j]);
+#endif		
 		binu += sizeof(uint32_t);
 	}
 	return true;

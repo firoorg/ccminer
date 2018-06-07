@@ -7,7 +7,7 @@
 #include <memory.h>
 
 
-#include "lyra2\cuda_lyra2_vectors.h"
+#include "lyra2/cuda_lyra2_vectors.h"
 static uint32_t *h_MinNonces[16]; // this need to get fixed as the rest of that routine
 static uint32_t *d_MinNonces[16];
 
@@ -370,9 +370,9 @@ void mtp_yloop(uint32_t threads, uint32_t startNounce, const uint4  * __restrict
 
 				}
 				DataChunk[0].lo = ((uint8*)GBlock)[localIndex * 32 + 31];
-				DataChunk[0].hi = {0};
-				DataChunk[1].lo = { 0 };
-				DataChunk[1].hi = { 0 };
+				DataChunk[0].hi = make_uint8(0,0,0,0,0,0,0,0);
+				DataChunk[1].lo = make_uint8(0,0,0,0,0,0,0,0);
+				DataChunk[1].hi = make_uint8(0,0,0,0,0,0,0,0);
 
 				blake2b_compress2c_256((uint2*)&YLocal, (uint2*)&DataTmp, (uint2*)DataChunk, 1024+32);
 

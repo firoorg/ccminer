@@ -30,10 +30,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "argon2ref\core.h"
-#include "argon2ref\thread.h"
-#include "argon2ref\blake2.h"
-#include "argon2ref\blake2-impl.h"
+#include "argon2ref/core.h"
+#include "argon2ref/thread.h"
+#include "argon2ref/blake2.h"
+#include "argon2ref/blake2-impl.h"
 
 #ifdef GENKAT
 #include "genkat.h"

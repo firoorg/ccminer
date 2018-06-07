@@ -19,8 +19,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "argon2ref\blake2.h"
-#include "argon2ref\blake2-impl.h"
+#include "argon2ref/blake2.h"
+#include "argon2ref/blake2-impl.h"
 
 static const uint64_t ablake2b_IV[8] = {
     UINT64_C(0x6a09e667f3bcc908), UINT64_C(0xbb67ae8584caa73b),

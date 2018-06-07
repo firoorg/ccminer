@@ -19,7 +19,7 @@
 #define ARGON2_CORE_H
 
 
-#include "argon2ref\argon2.h"
+#include "argon2ref/argon2.h"
 
 
 #if defined(_MSC_VER)

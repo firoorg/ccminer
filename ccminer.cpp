@@ -561,8 +561,8 @@ void proper_exit(int reason)
 	//free(thr_info);
 	exit(reason);
 }
-
-static bool jobj_binary(const json_t *obj, const char *key,
+/*
+ bool jobj_binary(const json_t *obj, const char *key,
 			void *buf, size_t buflen)
 {
 	const char *hexstr;
@@ -583,7 +583,7 @@ static bool jobj_binary(const json_t *obj, const char *key,
 
 	return true;
 }
-
+*/
 /* compute nbits to get the network diff */
 static void calc_network_diff(struct work *work)
 {
@@ -1505,6 +1505,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 	uint32_t target[8];
 	int cbtx_size;
 	uchar *cbtx = NULL;
+	int32_t mtpVersion = 0x1000;
 
 	int tx_count, tx_size;
 	uchar txc_vi[9];
@@ -1795,7 +1796,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 	memset(work->data + 19, 0x00, 52);
 /************************************************************************/
 //mtp stuff
-	int32_t mtpVersion = 0x1000;
+
 	work->data[20] = swab32(mtpVersion);
 /*************************************************************************/
 	

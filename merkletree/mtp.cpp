@@ -1,7 +1,7 @@
 //
 // Created by aizen on 4/9/17.
 //
-#pragma once 
+//#pragma once 
 #include "mtp.h"
 #ifdef _MSC_VER
 #include <windows.h>

@@ -20,7 +20,7 @@
 #include "argon2ref/blamka-round-opt.h"
 //#include "merkletree/sha.h"
 
-#include "openssl\sha.h"
+//#include "openssl\sha.h"
 
 #include "uint256.h"
 //#include "serialize.h"

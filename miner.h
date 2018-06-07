@@ -590,7 +590,7 @@ extern void dbin2hex(char *s, const unsigned char *p, size_t len);
 extern char *bin2hex(const unsigned char *in, size_t len);
 extern bool hex2bin(void *output, const char *hexstr, size_t len);
 
-bool jobj_binary(const json_t *obj, const char *key, void *buf, size_t buflen);
+extern bool jobj_binary(const json_t *obj, const char *key, void *buf, size_t buflen);
 int varint_encode(unsigned char *p, uint64_t n);
 size_t address_to_script(unsigned char *out, size_t outsz, const char *addr);
 extern int timeval_subtract(struct timeval *result, struct timeval *x,
