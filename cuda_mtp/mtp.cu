@@ -126,7 +126,7 @@ do  {
 			for (int j=0;j<(72*2);j++)
 				for (int i=0;i<128;i++)
 				mtp->nBlockMTP[j][i]=nBlockMTP[j].v[i];
-                int lenMax =0;
+                int lenMax =0; 
 				int len = 0;
 
 				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)*72*3*375);

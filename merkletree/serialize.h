@@ -5,6 +5,7 @@
 
 #ifndef BITCOIN_SERIALIZE_H
 #define BITCOIN_SERIALIZE_H
+<<<<<<< HEAD
 
 //MSVC
 #ifdef _MSC_VER        
@@ -12,6 +13,12 @@
 #endif
 //#include "endian.h"
 
+=======
+//MSVC
+#ifdef _MSC_VER 		
+#include "endian.h"
+#endif
+>>>>>>> f8e26ad18297691a9dec0232add6b696a0879762
 #include <algorithm>
 #include <assert.h>
 #include <ios>
@@ -35,6 +42,8 @@ using namespace std;
 // static const unsigned int MAX_SIZE = 0x02000000;
 // Zcoin - MTP
 static const unsigned int MAX_SIZE = 0x20000000;
+
+
 
 /**
  * Used to bypass the rule against non-const reference to temporary
