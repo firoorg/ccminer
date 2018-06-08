@@ -3446,7 +3446,7 @@ static void *miner_thread(void *userdata)
 
 out:
 	free(mtp);
-	free(&work);
+//	free(&work);
 	if (opt_led_mode)
 		gpu_led_off(dev_id);
 	if (opt_debug_threads)

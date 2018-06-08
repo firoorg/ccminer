@@ -3,7 +3,7 @@
 #include "argon2ref/argon2.h"
 #include "merkletree/mtp.h"
 
-
+#include <unistd.h>
 #include "miner.h"
 #include "cuda_helper.h"
 #define memcost 4*1024*1024
@@ -131,11 +131,16 @@ do  {
 
 				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)*72*3*375);
 
-				mtp->sizeProofMTP[0]= 375;
-
+//				mtp->sizeProofMTP[0]= 375;
+				printf("found a solution");
 				free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
-				ordered_tree.~MerkleTree();
-				TheElements.clear();
+//				free(instance.memory_blocks);
+//				free(instance.memory);
+//				printf("coming here 1");
+//				ordered_tree.~MerkleTree();
+//				printf("coming here 2");
+//				TheElements.clear();
+//				printf("coming here 3");
 				return res;
 
 			} else {

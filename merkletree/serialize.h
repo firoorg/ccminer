@@ -6,6 +6,10 @@
 #ifndef BITCOIN_SERIALIZE_H
 #define BITCOIN_SERIALIZE_H
 
+//MSVC
+#ifdef _MSC_VER        
+#include "endian.h"
+#endif
 //#include "endian.h"
 
 #include <algorithm>
