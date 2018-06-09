@@ -438,7 +438,7 @@ uint32_t mtp_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce)
 
 	uint32_t tpb = 256; //TPB52;
  
-	dim3 gridyloop(threads*32/tpb);
+	dim3 gridyloop(threads/tpb);
 	dim3 blockyloop(tpb);
 
 	mtp_yloop << < gridyloop,blockyloop >> >(threads,startNounce,HBlock,Elements,d_MinNonces[thr_id]);

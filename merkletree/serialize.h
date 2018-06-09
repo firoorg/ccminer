@@ -5,20 +5,11 @@
 
 #ifndef BITCOIN_SERIALIZE_H
 #define BITCOIN_SERIALIZE_H
-<<<<<<< HEAD
 
-//MSVC
 #ifdef _MSC_VER        
 #include "endian.h"
 #endif
-//#include "endian.h"
 
-=======
-//MSVC
-#ifdef _MSC_VER 		
-#include "endian.h"
-#endif
->>>>>>> f8e26ad18297691a9dec0232add6b696a0879762
 #include <algorithm>
 #include <assert.h>
 #include <ios>
