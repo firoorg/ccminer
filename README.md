@@ -1,23 +1,43 @@
-ccminer
-=======
+ccminer with mtp support
+========================
+djm34 2017-2018
 
-Based on Christian Buchner's &amp; Christian H.'s CUDA project, no more active on github recently.
+donation addresses:
+	BTC: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
+	XZC: aChWVb8CpgajadpLmiwDZvZaKizQgHxfh5
 
-Fork by tpruvot@github with X14,X15,X17,Blake256,BlakeCoin,Lyra2RE,Skein,ZR5 and others, check the [README.txt](README.txt)
+Based on Christian Buchner's &amp; Christian H.'s CUDA project and tpruvot@github.
 
-   BTC donation address: 1AJdfCpLWPNoAMDfHF1wD5y8VgKSSTHxPo
-   [![tip for next commit](https://tip4commit.com/projects/927.svg)](https://tip4commit.com/github/tpruvot/ccminer)
 
-A part of the recent algos were originally written by [djm34](https://github.com/djm34).
+Building on windows
+-------------------
 
-This variant was tested and built on Linux (ubuntu server 14.04) and VStudio 2013 on Windows 7.
+Required: msvc2015 and cuda 9.x (cuda 9.2 prefered)
+Dependencies for windows are included in compat directory, using a different version of msvc will most likely require to recompile those libraries.
 
-Note that the x86 releases are generally faster than x64 ones on Windows.
+In order to build ccminer, choose "Release" and "x64" (this version won't work with win32)
+Then click "generate"
 
-The recommended CUDA Toolkit version is [6.5.19](http://developer.download.nvidia.com/compute/cuda/6_5/rel/installers/cuda_6.5.19_windows_general_64.exe), but some light algos could be faster with the version 7.5 (like blake and skein).
+Building on Linux (tested on Ubuntu 16.04)
+------------------------------------------
 
-About source code dependencies
-------------------------------
+A developpement environnement is required together with curl, jansson and openssl
+
+
+	* sudo apt-get update && sudo apt-get -y dist-upgrade
+	* sudo apt-get -y install gcc g++ build-essential automake linux-headers-$(uname -r) git gawk libcurl4-openssl-dev libjansson-dev xorg libc++-dev libgmp-dev python-dev
+
+	* Installing CUDA 9.2 and compatible drivers from nvidia website and not from ubuntu package is usually easier
+	
+	* Compiling ccminner:
+
+	./autogen.sh
+	./configure
+	./make
+
+
+About source code dependencies for windows
+------------------------------------------
 
 This project requires some libraries to be built :
 
@@ -32,7 +52,30 @@ The tree now contains recent prebuilt openssl and curl .lib for both x86 and x64
 To rebuild them, you need to clone this repository and its submodules :
     git clone https://github.com/peters/curl-for-windows.git compat/curl-for-windows
 
-On Linux, you can use the helper ./build.sh (edit it if required)
 
-There is also an old [Tutorial for windows](http://cudamining.co.uk/url/tutorials/id/3) on [CudaMining](http://cudamining.co.uk) website.
+Running ccminer with mtp and requirement
+----------------------------------------
+
+mtp requires 4Gb of vram, hence cards with less than 4.5Gb of vram won't work.
+while running, ccminer will also use around 5.5Gb of ram. 
+For the moment, ccminer, support only one vga per instance, to run of several gpus, it is then required to run one ccminer instance by gpu.
+
+Instruction to mine on zcoin wallet (example)
+
+ccminer -a mtp -o  http://127.0.0.1:<rpcport>  -u <rpcuser> -p <rpcpassword> --coinbase-addr <zcoin-address>  -d 0  --no-getwork --no-longpoll 
+
+(see RUN-ZCOIN-MTP.cmd file for a working example)
+
+zcoin wallet should also be run with "server=1" option and "rpcport,rpcuser,rpcpassword" should match those of zcoin.conf
+
+
+NB: For the moment, the intensity is not adjustable, this project is still in developpement, this will be changed in the near future
+
+
+
+
+
+
+
+
 
