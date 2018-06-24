@@ -3,7 +3,9 @@ ccminer with mtp support
 djm34 2017-2018
 
 donation addresses:
+
 	BTC: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze
+
 	XZC: aChWVb8CpgajadpLmiwDZvZaKizQgHxfh5
 
 Based on Christian Buchner's &amp; Christian H.'s CUDA project and tpruvot@github.
@@ -62,7 +64,7 @@ For the moment, ccminer, support only one vga per instance, to run of several gp
 
 Instruction to mine on zcoin wallet (example)
 
-ccminer -a mtp -o  http://127.0.0.1:<rpcport>  -u <rpcuser> -p <rpcpassword> --coinbase-addr <zcoin-address>  -d 0  --no-getwork --no-longpoll 
+ccminer -a mtp -o  http://127.0.0.1:rpcport  -u rpcuser -p rpcpassword --coinbase-addr zcoin-address  --device card-number  --no-getwork --no-longpoll 
 
 (see RUN-ZCOIN-MTP.cmd file for a working example)
 
