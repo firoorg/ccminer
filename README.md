@@ -64,9 +64,14 @@ For the moment, ccminer, support only one vga per instance, to run of several gp
 
 Instruction to mine on zcoin wallet (example)
 
-ccminer -a mtp -o  http://127.0.0.1:rpcport  -u rpcuser -p rpcpassword --coinbase-addr zcoin-address  --device card-number  --no-getwork --no-longpoll 
+command line structure
 
-(see RUN-ZCOIN-MTP.cmd file for a working example)
+ccminer -a mtp -o  http://127.0.0.1:rpcport  -u rpcuser -p rpcpassword --coinbase-addr zcoin-address  --device card-number/name  --no-getwork --no-longpoll 
+
+Example (RUN-ZCOIN-MTP.cmd)
+
+ccminer -a mtp -o  http://127.0.0.1:8382  -u djm34 -p password --coinbase-addr aChWVb8CpgajadpLmiwDZvZaKizQgHxfh5 -d 1080  --no-getwork --no-longpoll
+
 
 zcoin wallet should also be run with "server=1" option and "rpcport,rpcuser,rpcpassword" should match those of zcoin.conf
 
