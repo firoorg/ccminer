@@ -57,8 +57,8 @@ void getblockindex(uint32_t ij, argon2_instance_t *instance, uint32_t *out_ij_pr
 //int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigned int d, block_mtpProof *output,
 // uint8_t *resultMerkleRoot, MerkleTree TheTree,uint32_t* input, uint256 hashTarget);
 
-int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance,
-	blockS *nBlockMTP /*[72 * 2][128]*/, unsigned char *nProofMTP, uint8_t* resultMerkleRoot,
+int mtp_solver(uint32_t TheNonce, argon2_instance_t *instance,
+	blockS *nBlockMTP /*[72 * 2][128]*/, unsigned char *nProofMTP, unsigned char* resultMerkleRoot,
 	MerkleTree TheTree, uint32_t* input, uint256 hashTarget);
 
-MerkleTree::Elements mtp_init_withtree(argon2_instance_t *instance,  uint8_t *resultMerkleRoot);
+MerkleTree::Elements mtp_init(argon2_instance_t *instance,  unsigned char *resultMerkleRoot);

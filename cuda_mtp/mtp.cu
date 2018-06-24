@@ -80,7 +80,7 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 
 	argon2_instance_t instance;
 	argon2_ctx_from_mtp(&context, &instance);
-	TheElements = mtp_init_withtree(&instance, TheMerkleRoot);
+	TheElements = mtp_init(&instance, TheMerkleRoot);
 	MerkleTree ordered_tree(TheElements, true);
 	MerkleTree::Buffer root = ordered_tree.getRoot();
 	std::copy(root.begin(), root.end(), TheMerkleRoot);
@@ -110,7 +110,7 @@ do  {
 			blockS nBlockMTP[72*2];
 			unsigned char nProofMTP[72*3*375];
 
-			uint32_t is_sol = mtp_solver_withblock(foundNonce, &instance, nBlockMTP,nProofMTP, TheMerkleRoot, ordered_tree, endiandata,TheUint256Target[0]);
+			uint32_t is_sol = mtp_solver(foundNonce, &instance, nBlockMTP,nProofMTP, TheMerkleRoot, ordered_tree, endiandata,TheUint256Target[0]);
 
 			if (is_sol==1 /*&& fulltest(vhash64, ptarget)*/) {
 				int res = 1;
@@ -131,16 +131,10 @@ do  {
 
 				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)*72*3*375);
 
-//				mtp->sizeProofMTP[0]= 375;
+
 				printf("found a solution");
 				free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
-//				free(instance.memory_blocks);
-//				free(instance.memory);
-//				printf("coming here 1");
-//				ordered_tree.~MerkleTree();
-//				printf("coming here 2");
-//				TheElements.clear();
-//				printf("coming here 3");
+
 				return res;
 
 			} else {

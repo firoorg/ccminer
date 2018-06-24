@@ -1662,19 +1662,19 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		char coinb7[90] = { 0 };
 		char script_payee[1024];
 
-		base58_decode("TDk19wPKYq91i18qmY6U9FeTdTxwPeSveo", script_payee);
+		base58_decode("aCAgTPgtYcA4EysU4UKC86EQd5cTtHtCcr", script_payee);
 		job_pack_tx(coinb1, 100000000, script_payee);
 
-		base58_decode("TWZZcDGkNixTAMtRBqzZkkMHbq1G6vUTk5", script_payee);
+		base58_decode("aHu897ivzmeFuLNB6956X6gyGeVNHUBRgD", script_payee);
 		job_pack_tx(coinb2, 100000000, script_payee);
 
-		base58_decode("TRZTFdNCKCKbLMQV8cZDkQN9Vwuuq4gDzT", script_payee);
+		base58_decode("aQ18FBVFtnueucZKeVg4srhmzbpAeb1KoN", script_payee);
 		job_pack_tx(coinb3, 100000000, script_payee);
 
-		base58_decode("TG2ruj59E5b1u9G3F7HQVs6pCcVDBxrQve", script_payee);
+		base58_decode("a1HwTdCmQV3NspP2QqCGpehoFpi8NY4Zg3", script_payee);
 		job_pack_tx(coinb4, 300000000, script_payee);
 
-		base58_decode("TCsTzQZKVn4fao8jDmB9zQBk9YQNEZ3XfS", script_payee);
+		base58_decode("a1kCCGddf5pMXSipLVD9hBG2MGGVNaJ15U", script_payee);
 		job_pack_tx(coinb5, 100000000, script_payee);
 		
 		base58_decode("TQqf4ETjAfcB8WKiUn1J1s9m6R3J1ybfvm", script_payee);

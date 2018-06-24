@@ -406,8 +406,8 @@ argon2_context init_argon2d_param(const char* input) {
 
 
 
-int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance,
-	blockS *nBlockMTP /*[72 * 2][128]*/,unsigned char* nProofMTP, uint8_t* resultMerkleRoot, 
+int mtp_solver(uint32_t TheNonce, argon2_instance_t *instance,
+	blockS *nBlockMTP /*[72 * 2][128]*/,unsigned char* nProofMTP, unsigned char* resultMerkleRoot, 
 MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 
 
@@ -593,7 +593,7 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 	return 0;
 }
 
-MerkleTree::Elements mtp_init_withtree( argon2_instance_t *instance, uint8_t *resultMerkleRoot) {
+MerkleTree::Elements mtp_init( argon2_instance_t *instance, unsigned char *resultMerkleRoot) {
 	//internal_kat(instance, r); /* Print all memory blocks */
 	printf("Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory \n");
 	// Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory
