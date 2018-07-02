@@ -1515,6 +1515,10 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 	bool version_force = false;
 	bool version_reduce = false;
 	json_t *tmp, *txa;
+	json_t *mpay;
+	json_t *mnval;
+	json_t *mnamount;
+	json_t *mnaddy;
 	bool rc = false;
 
 	tmp = json_object_get(val, "mutable");
@@ -1626,6 +1630,16 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 			applog(LOG_ERR, "JSON invalid coinbasevalue");
 			goto out;
 		}
+		mpay = json_object_get(val,"znode_payments_started");
+		if (mpay) {
+		mnval = json_object_get(val, "znode");
+			mnamount = json_object_get(mnval,"amount");
+			mnaddy = json_object_get(mnval, "payee");
+/*
+		printf("mn addy %s", json_string_value(mnaddy));
+		printf("mn amount %d", json_integer_value(mnamount));
+*/
+		}
 		cbvalue = (int64_t)(json_is_integer(tmp) ? json_integer_value(tmp) : json_number_value(tmp));
 		cbtx = (uchar*)malloc(256*256);
 		le32enc((uint32_t *)cbtx, 1); // version /
@@ -1641,7 +1655,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		le32enc((uint32_t *)(cbtx + cbtx_size), 0xffffffff); // sequence /
 		cbtx_size += 4;
 		
-		cbtx[cbtx_size++] = 7; // out-counter /
+		cbtx[cbtx_size++] = (mpay && json_integer_value(mnamount)!=0)? 7:6; // out-counter /
 
 		le32enc((uint32_t *)(cbtx + cbtx_size), (uint32_t)cbvalue); // value /
 		le32enc((uint32_t *)(cbtx + cbtx_size + 4), cbvalue >> 32);
@@ -1658,7 +1672,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		char coinb3[74] = { 0 };
 		char coinb4[74] = { 0 };
 		char coinb5[74] = { 0 };
-		char coinb6[90] = { 0 };
+		char coinb6[74] = { 0 };
 		char coinb7[90] = { 0 };
 		char script_payee[1024];
 
@@ -1676,11 +1690,13 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 
 		base58_decode("a1kCCGddf5pMXSipLVD9hBG2MGGVNaJ15U", script_payee);
 		job_pack_tx(coinb5, 100000000, script_payee);
-		
-		base58_decode("TQqf4ETjAfcB8WKiUn1J1s9m6R3J1ybfvm", script_payee);
-		job_pack_tx(coinb6, 1500000000, script_payee);
-
-		strcat(coinb6, "00000000"); // locktime
+		if (mpay && json_integer_value(mnamount)!=0) {
+		base58_decode((char*)json_string_value(mnaddy), script_payee);
+		job_pack_tx(coinb6, json_integer_value(mnamount), script_payee);
+		}
+		printf("coinb6 %s \n",coinb6);
+//		strcat(coinb6,"76a9146f3927c5ae2f3225260dd4d1880c7a33afe8bc5488ac");
+		strcat(coinb7, "00000000"); // locktime
 
 		hex2bin(cbtx + cbtx_size, coinb1, strlen(coinb1));
 		cbtx_size = cbtx_size + (int)((strlen(coinb1)) / 2);
@@ -1700,7 +1716,8 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		hex2bin(cbtx + cbtx_size, coinb6, strlen(coinb6));
 		cbtx_size = cbtx_size + (int)((strlen(coinb6)) / 2);
 		
-
+		hex2bin(cbtx + cbtx_size, coinb7, strlen(coinb7));
+		cbtx_size = cbtx_size + (int)((strlen(coinb7)) / 2);
 		coinbase_append = true;
 	}
 	if (coinbase_append) {
