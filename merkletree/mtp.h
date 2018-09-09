@@ -1,5 +1,4 @@
 //
-// Created by aizen on 4/09/17.
 //
 
 #ifndef ZCOIN_MTP_H
@@ -58,7 +57,7 @@ void getblockindex(uint32_t ij, argon2_instance_t *instance, uint32_t *out_ij_pr
 // uint8_t *resultMerkleRoot, MerkleTree TheTree,uint32_t* input, uint256 hashTarget);
 
 int mtp_solver(uint32_t TheNonce, argon2_instance_t *instance,
-	blockS *nBlockMTP /*[72 * 2][128]*/, unsigned char *nProofMTP, unsigned char* resultMerkleRoot,
+	blockS *nBlockMTP /*[72 * 2][128]*/, unsigned char *nProofMTP, unsigned char* resultMerkleRoot, unsigned char* mtpHashValue,
 	MerkleTree TheTree, uint32_t* input, uint256 hashTarget);
 
 MerkleTree::Elements mtp_init(argon2_instance_t *instance,  unsigned char *resultMerkleRoot);

@@ -717,8 +717,9 @@ struct work {
 struct mtp {
 	int MTPVersion;
 	unsigned char MerkleRoot[16];
+	unsigned char mtpHashValue[32];
 	uint64_t nBlockMTP[72*2][128];
-	unsigned char nProofMTP[72*3*375]; // largest estimate
+	unsigned char nProofMTP[72*3*441]; // largest estimate
 	uint32_t sizeProofMTP[72*3];
 };
 

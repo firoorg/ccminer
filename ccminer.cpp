@@ -1084,8 +1084,10 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 	int idnonce = 0;
 	
 	uint32_t SizeMerkleRoot = 16;
+	uint32_t SizeReserved = 64;
+	uint32_t SizeMtpHash = 32;
 	uint32_t SizeBlockMTP = 72*2*128*8;
-	uint32_t SizeProofMTP = 72*3*375;
+	uint32_t SizeProofMTP = 72*3*441;
 //	for (int i=0;i<72*3;i++)
 //	SizeProofMTP += mtp->sizeProofMTP[i];
 	
@@ -1106,11 +1108,25 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 	char *proofmtp_str = (char*)malloc(2*SizeProofMTP+1);
 	char *blockmtp_str = (char*)malloc(2*SizeBlockMTP+1);
 	char *merkleroot_str = (char*)malloc(2*SizeMerkleRoot+1);
+	char *mtphashvalue_str = (char*)malloc(2 * SizeMtpHash + 1);
+	char *mtpreserved_str = (char*)malloc(2*SizeReserved+1);
 
 	for (uint32_t i = 0; i < SizeMerkleRoot; i++)
 	{
 		sprintf(&merkleroot_str[2*i], "%02x", mtp->MerkleRoot[i]);
 	}
+
+	for (uint32_t i = 0; i < SizeMtpHash; i++)
+	{
+		sprintf(&mtphashvalue_str[2 * i], "%02x", mtp->mtpHashValue[i]);
+	}
+
+
+	for (uint32_t i = 0; i < SizeReserved; i++)
+	{
+		sprintf(&mtpreserved_str[2 * i], "%02x", 0);
+	}
+
 
 	for (uint32_t i = 0; i < 72*2; i++)
 	{
@@ -1120,7 +1136,7 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 
 
 	
-	for (int i = 0;i< 72*3*375;i++)
+	for (int i = 0;i< 72*3*441;i++)
 	sprintf(&proofmtp_str[2*i],"%02x",mtp->nProofMTP[i]);
 
 
@@ -1146,20 +1162,29 @@ if (work->txs) { /* gbt */
 			params = json_dumps(val, 0);
 			json_decref(val);
 
-			req = (char*)malloc(128 + 2 * 84 + strlen(work->txs) + strlen(params) + strlen(proofmtp_str) + strlen(blockmtp_str) + strlen(merkleroot_str));
+			req = (char*)malloc(128 + 2 * 84 + strlen(work->txs) + strlen(params) + strlen(mtphashvalue_str) + strlen(mtpreserved_str)  + strlen(merkleroot_str)+ strlen(proofmtp_str) + strlen(blockmtp_str));
 			sprintf(req,
-				"{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s\", %s], \"id\":4}\r\n",
-				data_str, merkleroot_str, blockmtp_str, proofmtp_str, work->txs, params);
+				"{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s%s%s\", %s], \"id\":4}\r\n",
+				data_str, mtphashvalue_str, mtpreserved_str, merkleroot_str, blockmtp_str, proofmtp_str, work->txs, params);
 			free(params);
 
 		}
 		else {
-			req = (char*)malloc(128 + 2 * 84 + strlen(work->txs) + strlen(proofmtp_str) + strlen(blockmtp_str)  + strlen(merkleroot_str) );
+			req = (char*)malloc(128 + 2 * 84 + strlen(work->txs) + strlen(mtphashvalue_str) + strlen(mtpreserved_str)  + strlen(merkleroot_str) + strlen(proofmtp_str) + strlen(blockmtp_str) );
 			sprintf(req,
-				"{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s\"], \"id\":4}\r\n",
-				data_str, merkleroot_str , blockmtp_str, proofmtp_str, work->txs);
+				"{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s%s%s\"], \"id\":4}\r\n",
+				data_str, mtphashvalue_str, mtpreserved_str, merkleroot_str, blockmtp_str, proofmtp_str, work->txs);
 		}
+/*
+printf("data_str %s\n", data_str);
+printf("mtphashvalue_str %s\n", mtphashvalue_str);
+printf("mtpreserved_str %s\n", mtpreserved_str);
+printf("merkleroot_str %s\n", merkleroot_str);
 
+
+printf("*****************************************************************************************************the whole data \n");
+printf("%s%s%s%s%s%s%s\n", data_str, mtphashvalue_str, mtpreserved_str, merkleroot_str, blockmtp_str, proofmtp_str, work->txs);
+*/
 		//	val = json_rpc_call(curl, rpc_url, rpc_userpass, req, NULL, 0);
 		val = json_rpc_call_pool(curl, pool, req, false, false, NULL);
 		free(req);
@@ -1195,7 +1220,8 @@ if (work->txs) { /* gbt */
 free(proofmtp_str); 
 free(blockmtp_str); 
 free(merkleroot_str);
-
+free(mtpreserved_str);
+free(mtphashvalue_str);
 	return true;
 }
 
@@ -1631,6 +1657,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 			goto out;
 		}
 		mpay = json_object_get(val,"znode_payments_started");
+//		mpay = false;
 		if (mpay) {
 		mnval = json_object_get(val, "znode");
 			mnamount = json_object_get(mnval,"amount");
@@ -1675,7 +1702,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		char coinb6[74] = { 0 };
 		char coinb7[90] = { 0 };
 		char script_payee[1024];
-
+/*  // for mainnet
 		base58_decode("aCAgTPgtYcA4EysU4UKC86EQd5cTtHtCcr", script_payee);
 		job_pack_tx(coinb1, 100000000, script_payee);
 
@@ -1690,12 +1717,28 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 
 		base58_decode("a1kCCGddf5pMXSipLVD9hBG2MGGVNaJ15U", script_payee);
 		job_pack_tx(coinb5, 100000000, script_payee);
+*/
+
+		base58_decode("TDk19wPKYq91i18qmY6U9FeTdTxwPeSveo", script_payee);
+		job_pack_tx(coinb1, 100000000, script_payee);
+
+		base58_decode("TWZZcDGkNixTAMtRBqzZkkMHbq1G6vUTk5", script_payee);
+		job_pack_tx(coinb2, 100000000, script_payee);
+
+		base58_decode("TRZTFdNCKCKbLMQV8cZDkQN9Vwuuq4gDzT", script_payee);
+		job_pack_tx(coinb3, 100000000, script_payee);
+
+		base58_decode("TG2ruj59E5b1u9G3F7HQVs6pCcVDBxrQve", script_payee);
+		job_pack_tx(coinb4, 300000000, script_payee);
+
+		base58_decode("TCsTzQZKVn4fao8jDmB9zQBk9YQNEZ3XfS", script_payee);
+		job_pack_tx(coinb5, 100000000, script_payee);
+
 		if (mpay && json_integer_value(mnamount)!=0) {
 		base58_decode((char*)json_string_value(mnaddy), script_payee);
 		job_pack_tx(coinb6, json_integer_value(mnamount), script_payee);
 		}
-		printf("coinb6 %s \n",coinb6);
-//		strcat(coinb6,"76a9146f3927c5ae2f3225260dd4d1880c7a33afe8bc5488ac");
+
 		strcat(coinb7, "00000000"); // locktime
 
 		hex2bin(cbtx + cbtx_size, coinb1, strlen(coinb1));

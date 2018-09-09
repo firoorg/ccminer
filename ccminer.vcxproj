@@ -278,8 +278,6 @@
     <ClInclude Include="lyra2\cuda_lyra2_sm2.cuh" />
     <ClInclude Include="merkletree\merkle-tree.hpp" />
     <ClInclude Include="merkletree\mtp.h" />
-    <ClInclude Include="merkletree\serialize.h" />
-    <ClInclude Include="merkletree\streams.h" />
     <ClInclude Include="neoscrypt\neoscrypt.h" />
     <ClCompile Include="neoscrypt\neoscrypt.cpp" />
     <ClCompile Include="neoscrypt\neoscrypt-cpu.c" />

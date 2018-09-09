@@ -1,5 +1,4 @@
 //
-// Created by aizen on 4/9/17.
 //
 //#pragma once 
 #include "mtp.h"
@@ -14,6 +13,7 @@
 #if defined __STDC_LIB_EXT1__
 #define __STDC_WANT_LIB_EXT1__ 1
 #endif
+
 
 #define memcost 4*1024*1024
 static const unsigned int d_mtp = 1;
@@ -407,7 +407,7 @@ argon2_context init_argon2d_param(const char* input) {
 
 
 int mtp_solver(uint32_t TheNonce, argon2_instance_t *instance,
-	blockS *nBlockMTP /*[72 * 2][128]*/,unsigned char* nProofMTP, unsigned char* resultMerkleRoot, 
+	blockS *nBlockMTP /*[72 * 2][128]*/,unsigned char* nProofMTP, unsigned char* resultMerkleRoot, unsigned char* mtpHashValue,
 MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 
 
@@ -488,8 +488,8 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 			clear_internal_memory(blockhash_curr.v, ARGON2_BLOCK_SIZE);
 			clear_internal_memory(blockhash_curr_bytes, ARGON2_BLOCK_SIZE);
 
- 
-
+			
+			/*
 			CDataStream MyStreamCurr(4,8);
 			MyStreamCurr.clear();
 			Serialize(MyStreamCurr,TheTree.getProofOrdered(hash_curr, ij + 1),4,8);
@@ -498,10 +498,29 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 			nProofMTP[(j * 3 - 3)*375 + i] = Machin;
 			//		printf("MyStream %02x %02x machin %02x\n",MyStream[i]&0xff, TheNewString[i],Machin);
 			}
+			*/
+//printf("coming here");
+////////////////////  testing /////////////////////////
+			std::deque<std::vector<uint8_t>> zProofMTP = TheTree.getProofOrdered(hash_curr, ij + 1);
+			std::vector<uint32_t> lengths;
+			for (const std::vector<uint8_t> &mtpData : zProofMTP) {
+				lengths.push_back((uint32_t)mtpData.size());
+			}
+			if (lengths.size()!=22) 
+						printf("******************* length different of 22 ************** %d\n", lengths.size());
+			nProofMTP[(j * 3 - 3) * 441] = (unsigned char)(lengths.size());
+			uint8_t zVector[22*4];
 
-			
+			std::copy(lengths.begin(), lengths.end(), (uint32_t*)(zVector));
+			for (int k=0;k<lengths.size()*4;k++)
+				nProofMTP[1 + (j * 3 - 3) * 441 + k] = zVector[k];
 
-
+//			std::copy(lengths.begin(),lengths.end(), (uint32_t*)(nProofMTP+ 1 + (j*3-3)*441));
+			int k2=0;
+			for (const std::vector<uint8_t> &mtpData : zProofMTP) {	
+			std::copy(mtpData.begin(),mtpData.end(), nProofMTP +((j * 3 - 3) * 441 + 1 + 22 * 4 + k2*mtpData.size()));
+			k2++;
+			}
 
 			//LogPrintf("storing prev proof\n");
 			//prev proof
@@ -522,7 +541,7 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 			MerkleTree::Buffer hash_prev = MerkleTree::Buffer(digest_prev, digest_prev + sizeof(digest_prev));
 			clear_internal_memory(blockhash_prev.v, ARGON2_BLOCK_SIZE);
 			clear_internal_memory(blockhash_prev_bytes, ARGON2_BLOCK_SIZE);
- 
+/* 
 			CDataStream MyStreamPrev(4, 8);
 			MyStreamPrev.clear();
 			Serialize(MyStreamPrev, TheTree.getProofOrdered(hash_prev, prev_index + 1), 4, 8);
@@ -531,7 +550,28 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 				nProofMTP[(j * 3 - 2) * 375 + i] = Machin;
 				//		printf("MyStream %02x %02x machin %02x\n",MyStream[i]&0xff, TheNewString[i],Machin);
 			}
+*/
+			std::deque<std::vector<uint8_t>> zProofMTP2 = TheTree.getProofOrdered(hash_prev, prev_index + 1);
+			std::vector<uint32_t> lengths2;
+			for (const std::vector<uint8_t> &mtpData : zProofMTP2) {
+				lengths2.push_back((uint32_t)mtpData.size());
+			}
+			if (lengths2.size() != 22)
+				printf("******************* length different of 22 ************** %d\n", lengths2.size());
+			nProofMTP[(j * 3 - 2) * 441] = (unsigned char)(lengths2.size());
+			uint8_t zVector2[22*4];
 
+			std::copy(lengths2.begin(), lengths2.end(), (uint32_t*)(zVector2));
+			for (int k = 0; k<(lengths2.size() * 4); k++)
+				nProofMTP[1 + (j * 3 - 2) * 441 + k] = zVector2[k];
+
+
+//			std::copy(lengths2.begin(), lengths2.end(), (uint32_t*)(nProofMTP + 1 + (j * 3 - 2) * 441));
+			k2 = 0;
+			for (const std::vector<uint8_t> &mtpData : zProofMTP2) {
+				std::copy(mtpData.begin(), mtpData.end(), nProofMTP + ((j * 3 - 2) * 441 + 1 + 22 * 4 + k2*mtpData.size()));
+				k2++;
+			}
 
  
 			//ref proof
@@ -548,7 +588,7 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 			MerkleTree::Buffer hash_ref = MerkleTree::Buffer(digest_ref, digest_ref + sizeof(digest_ref));
 			clear_internal_memory(blockhash_ref.v, ARGON2_BLOCK_SIZE);
 			clear_internal_memory(blockhash_ref_bytes, ARGON2_BLOCK_SIZE);
- 
+/* 
 			CDataStream MyStreamRef(4, 8);
 			MyStreamRef.clear();
 			Serialize(MyStreamRef, TheTree.getProofOrdered(hash_ref, ref_index + 1), 4, 8);
@@ -557,7 +597,26 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 				nProofMTP[(j * 3 - 1) * 375 + i] = Machin;
 				//		printf("MyStream %02x %02x machin %02x\n",MyStream[i]&0xff, TheNewString[i],Machin);
 			}
+*/
+			std::deque<std::vector<uint8_t>> zProofMTPref = TheTree.getProofOrdered(hash_ref, ref_index + 1);
+			std::vector<uint32_t> lengthsref;
+			for (const std::vector<uint8_t> &mtpData : zProofMTPref) {
+				lengthsref.push_back((uint32_t)mtpData.size());
+			}
+			if (lengthsref.size() != 22)
+				printf("******************* length different of 22 ************** %d\n", lengthsref.size());
+			nProofMTP[(j * 3 - 1) * 441]= (unsigned char)(lengthsref.size());
+			uint8_t zVector3[22*4];
+			std::copy(lengthsref.begin(), lengthsref.end(), (uint32_t*)(zVector3));
+			for (int k = 0; k<lengthsref.size() * 4; k++)
+				nProofMTP[1 + (j * 3 - 1) * 441 + k] = zVector3[k];
 
+//			std::copy(lengthsref.begin(), lengthsref.end(), (uint32_t*)(nProofMTP + 1 + (j * 3 - 1) * 441));
+			k2 = 0;
+			for (const std::vector<uint8_t> &mtpData : zProofMTPref) {
+				std::copy(mtpData.begin(), mtpData.end(), nProofMTP + ((j * 3 - 1) * 441 + 22 * 4 + 1 + k2*mtpData.size()));
+				k2++;
+			}
 
 
 /////////////////////////////////////////////////////////////////////
@@ -576,6 +635,9 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 
 		}
 		else {
+			for (int i=0;i<32;i++)
+			mtpHashValue[i]= (((unsigned char*)(&Y[L]))[i]);
+
 			// Found a solution
 			printf("Found a solution. Nonce=%08x Hash:",TheNonce);
 			for (int n = 0; n < 32; n++) {

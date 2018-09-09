@@ -9,8 +9,8 @@ extern "C" {
 #include <deque>
 #include <string>
 #include <stdexcept>
-#include "serialize.h"
-#include "streams.h"
+//#include "serialize.h"
+//#include "streams.h"
 /** Size of a hash, in bytes
  *
  * We are using Blake2b with an output of 128 bits, which is 16 bytes.
@@ -164,9 +164,7 @@ public :
      * \throw `std::runtime_error` if `index` does not point to `element`
      */
     std::string getProofOrderedHex(const Buffer& element, size_t index) const;
-	void getProofOrderedFormatHex(const Buffer& element, size_t index, unsigned char* TheUChar, int &sizeofuchar) const;
-	void GetProofSerialized(const Buffer& element, size_t index, unsigned char* mychar);
-	unsigned int GetSizeProofSerialized(const Buffer& element, size_t index) const;
+	
 	
 
     /** Check the given proof for the given element

@@ -560,12 +560,6 @@
     <ClInclude Include="cuda_mtp\cuda_sha256_helper.cuh">
       <Filter>Source Files\CUDA\mtp</Filter>
     </ClInclude>
-    <ClInclude Include="merkletree\serialize.h">
-      <Filter>Header Files\MerkleTree</Filter>
-    </ClInclude>
-    <ClInclude Include="merkletree\streams.h">
-      <Filter>Header Files\MerkleTree</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda.cpp">
