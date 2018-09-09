@@ -488,19 +488,7 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 			clear_internal_memory(blockhash_curr.v, ARGON2_BLOCK_SIZE);
 			clear_internal_memory(blockhash_curr_bytes, ARGON2_BLOCK_SIZE);
 
-			
-			/*
-			CDataStream MyStreamCurr(4,8);
-			MyStreamCurr.clear();
-			Serialize(MyStreamCurr,TheTree.getProofOrdered(hash_curr, ij + 1),4,8);
-			for (int i=0;i<MyStreamCurr.size();i++) {
-			unsigned char Machin = MyStreamCurr[i];
-			nProofMTP[(j * 3 - 3)*375 + i] = Machin;
-			//		printf("MyStream %02x %02x machin %02x\n",MyStream[i]&0xff, TheNewString[i],Machin);
-			}
-			*/
-//printf("coming here");
-////////////////////  testing /////////////////////////
+
 			std::deque<std::vector<uint8_t>> zProofMTP = TheTree.getProofOrdered(hash_curr, ij + 1);
 			std::vector<uint32_t> lengths;
 			for (const std::vector<uint8_t> &mtpData : zProofMTP) {
@@ -508,21 +496,16 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 			}
 			if (lengths.size()!=22) 
 						printf("******************* length different of 22 ************** %d\n", lengths.size());
+
 			nProofMTP[(j * 3 - 3) * 441] = (unsigned char)(lengths.size());
-			uint8_t zVector[22*4];
 
-			std::copy(lengths.begin(), lengths.end(), (uint32_t*)(zVector));
-			for (int k=0;k<lengths.size()*4;k++)
-				nProofMTP[1 + (j * 3 - 3) * 441 + k] = zVector[k];
-
-//			std::copy(lengths.begin(),lengths.end(), (uint32_t*)(nProofMTP+ 1 + (j*3-3)*441));
+			std::memcpy(nProofMTP + 1 + (j * 3 - 3) * 441, (unsigned char*)lengths.data(), lengths.size() * 4);
 			int k2=0;
 			for (const std::vector<uint8_t> &mtpData : zProofMTP) {	
 			std::copy(mtpData.begin(),mtpData.end(), nProofMTP +((j * 3 - 3) * 441 + 1 + 22 * 4 + k2*mtpData.size()));
 			k2++;
 			}
 
-			//LogPrintf("storing prev proof\n");
 			//prev proof
 			unsigned char prev[32]={0};
 			block blockhash_prev;
@@ -541,16 +524,7 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 			MerkleTree::Buffer hash_prev = MerkleTree::Buffer(digest_prev, digest_prev + sizeof(digest_prev));
 			clear_internal_memory(blockhash_prev.v, ARGON2_BLOCK_SIZE);
 			clear_internal_memory(blockhash_prev_bytes, ARGON2_BLOCK_SIZE);
-/* 
-			CDataStream MyStreamPrev(4, 8);
-			MyStreamPrev.clear();
-			Serialize(MyStreamPrev, TheTree.getProofOrdered(hash_prev, prev_index + 1), 4, 8);
-			for (int i = 0; i<MyStreamPrev.size(); i++) {
-				unsigned char Machin = MyStreamPrev[i];
-				nProofMTP[(j * 3 - 2) * 375 + i] = Machin;
-				//		printf("MyStream %02x %02x machin %02x\n",MyStream[i]&0xff, TheNewString[i],Machin);
-			}
-*/
+
 			std::deque<std::vector<uint8_t>> zProofMTP2 = TheTree.getProofOrdered(hash_prev, prev_index + 1);
 			std::vector<uint32_t> lengths2;
 			for (const std::vector<uint8_t> &mtpData : zProofMTP2) {
@@ -558,15 +532,12 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 			}
 			if (lengths2.size() != 22)
 				printf("******************* length different of 22 ************** %d\n", lengths2.size());
+
 			nProofMTP[(j * 3 - 2) * 441] = (unsigned char)(lengths2.size());
-			uint8_t zVector2[22*4];
 
-			std::copy(lengths2.begin(), lengths2.end(), (uint32_t*)(zVector2));
-			for (int k = 0; k<(lengths2.size() * 4); k++)
-				nProofMTP[1 + (j * 3 - 2) * 441 + k] = zVector2[k];
+			std::memcpy(nProofMTP + 1 + (j * 3 - 2) * 441, (unsigned char*)lengths2.data(), lengths2.size() * 4);
 
 
-//			std::copy(lengths2.begin(), lengths2.end(), (uint32_t*)(nProofMTP + 1 + (j * 3 - 2) * 441));
 			k2 = 0;
 			for (const std::vector<uint8_t> &mtpData : zProofMTP2) {
 				std::copy(mtpData.begin(), mtpData.end(), nProofMTP + ((j * 3 - 2) * 441 + 1 + 22 * 4 + k2*mtpData.size()));
@@ -588,16 +559,7 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 			MerkleTree::Buffer hash_ref = MerkleTree::Buffer(digest_ref, digest_ref + sizeof(digest_ref));
 			clear_internal_memory(blockhash_ref.v, ARGON2_BLOCK_SIZE);
 			clear_internal_memory(blockhash_ref_bytes, ARGON2_BLOCK_SIZE);
-/* 
-			CDataStream MyStreamRef(4, 8);
-			MyStreamRef.clear();
-			Serialize(MyStreamRef, TheTree.getProofOrdered(hash_ref, ref_index + 1), 4, 8);
-			for (int i = 0; i<MyStreamRef.size(); i++) {
-				unsigned char Machin = MyStreamRef[i];
-				nProofMTP[(j * 3 - 1) * 375 + i] = Machin;
-				//		printf("MyStream %02x %02x machin %02x\n",MyStream[i]&0xff, TheNewString[i],Machin);
-			}
-*/
+
 			std::deque<std::vector<uint8_t>> zProofMTPref = TheTree.getProofOrdered(hash_ref, ref_index + 1);
 			std::vector<uint32_t> lengthsref;
 			for (const std::vector<uint8_t> &mtpData : zProofMTPref) {
@@ -605,13 +567,11 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 			}
 			if (lengthsref.size() != 22)
 				printf("******************* length different of 22 ************** %d\n", lengthsref.size());
-			nProofMTP[(j * 3 - 1) * 441]= (unsigned char)(lengthsref.size());
-			uint8_t zVector3[22*4];
-			std::copy(lengthsref.begin(), lengthsref.end(), (uint32_t*)(zVector3));
-			for (int k = 0; k<lengthsref.size() * 4; k++)
-				nProofMTP[1 + (j * 3 - 1) * 441 + k] = zVector3[k];
 
-//			std::copy(lengthsref.begin(), lengthsref.end(), (uint32_t*)(nProofMTP + 1 + (j * 3 - 1) * 441));
+			nProofMTP[(j * 3 - 1) * 441]= (unsigned char)(lengthsref.size());
+
+			std::memcpy(nProofMTP+ 1 + (j * 3 - 1) * 441,(unsigned char*)lengthsref.data(),lengthsref.size()*4);
+
 			k2 = 0;
 			for (const std::vector<uint8_t> &mtpData : zProofMTPref) {
 				std::copy(mtpData.begin(), mtpData.end(), nProofMTP + ((j * 3 - 1) * 441 + 22 * 4 + 1 + k2*mtpData.size()));
