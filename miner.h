@@ -82,6 +82,8 @@ enum {
 };
 #endif
 
+#define MTP_L 64
+
 typedef unsigned char uchar;
 
 #undef unlikely
@@ -718,9 +720,9 @@ struct mtp {
 	int MTPVersion;
 	unsigned char MerkleRoot[16];
 	unsigned char mtpHashValue[32];
-	uint64_t nBlockMTP[72*2][128];
-	unsigned char nProofMTP[72*3*441]; // largest estimate
-	uint32_t sizeProofMTP[72*3];
+	uint64_t nBlockMTP[MTP_L*2][128];
+	unsigned char nProofMTP[MTP_L *3* 353]; // largest estimate
+	uint32_t sizeProofMTP[MTP_L *3];
 };
 
 

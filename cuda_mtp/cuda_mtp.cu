@@ -34,7 +34,7 @@ uint4 * HBlock;
 #define gpu_thread 2
 #define gpu_shared 128
 #define kernel1_thread 64
-#define mtp_L 72
+#define mtp_L 64
 #define TPB52 32
 #define TPB30 160
 #define TPB20 160

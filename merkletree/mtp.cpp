@@ -17,7 +17,7 @@
 
 #define memcost 4*1024*1024
 static const unsigned int d_mtp = 1;
-static const uint8_t L = 72;
+static const uint8_t L = 64;
 static const unsigned int memory_cost = memcost;
 
 uint32_t index_beta(const argon2_instance_t *instance,
@@ -490,20 +490,13 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 
 
 			std::deque<std::vector<uint8_t>> zProofMTP = TheTree.getProofOrdered(hash_curr, ij + 1);
-			std::vector<uint32_t> lengths;
-			for (const std::vector<uint8_t> &mtpData : zProofMTP) {
-				lengths.push_back((uint32_t)mtpData.size());
-			}
-			if (lengths.size()!=22) 
-						printf("******************* length different of 22 ************** %d\n", lengths.size());
 
-			nProofMTP[(j * 3 - 3) * 441] = (unsigned char)(lengths.size());
+			nProofMTP[(j * 3 - 3) * 353] = (unsigned char)(zProofMTP.size());
 
-			std::memcpy(nProofMTP + 1 + (j * 3 - 3) * 441, (unsigned char*)lengths.data(), lengths.size() * 4);
-			int k2=0;
+			int k1=0;
 			for (const std::vector<uint8_t> &mtpData : zProofMTP) {	
-			std::copy(mtpData.begin(),mtpData.end(), nProofMTP +((j * 3 - 3) * 441 + 1 + 22 * 4 + k2*mtpData.size()));
-			k2++;
+			std::copy(mtpData.begin(),mtpData.end(), nProofMTP +((j * 3 - 3) * 353 + 1 + k1 * mtpData.size()));
+			k1++;
 			}
 
 			//prev proof
@@ -526,25 +519,16 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 			clear_internal_memory(blockhash_prev_bytes, ARGON2_BLOCK_SIZE);
 
 			std::deque<std::vector<uint8_t>> zProofMTP2 = TheTree.getProofOrdered(hash_prev, prev_index + 1);
-			std::vector<uint32_t> lengths2;
+
+			nProofMTP[(j * 3 - 2) * 353] = (unsigned char)(zProofMTP2.size());
+
+			int k2 = 0;
 			for (const std::vector<uint8_t> &mtpData : zProofMTP2) {
-				lengths2.push_back((uint32_t)mtpData.size());
-			}
-			if (lengths2.size() != 22)
-				printf("******************* length different of 22 ************** %d\n", lengths2.size());
-
-			nProofMTP[(j * 3 - 2) * 441] = (unsigned char)(lengths2.size());
-
-			std::memcpy(nProofMTP + 1 + (j * 3 - 2) * 441, (unsigned char*)lengths2.data(), lengths2.size() * 4);
-
-
-			k2 = 0;
-			for (const std::vector<uint8_t> &mtpData : zProofMTP2) {
-				std::copy(mtpData.begin(), mtpData.end(), nProofMTP + ((j * 3 - 2) * 441 + 1 + 22 * 4 + k2*mtpData.size()));
+				std::copy(mtpData.begin(), mtpData.end(), nProofMTP + ((j * 3 - 2) * 353 + 1 + k2 * mtpData.size()));
 				k2++;
 			}
 
- 
+
 			//ref proof
 			unsigned char ref[32] = { 0 };
 			block blockhash_ref;
@@ -560,22 +544,14 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 			clear_internal_memory(blockhash_ref.v, ARGON2_BLOCK_SIZE);
 			clear_internal_memory(blockhash_ref_bytes, ARGON2_BLOCK_SIZE);
 
-			std::deque<std::vector<uint8_t>> zProofMTPref = TheTree.getProofOrdered(hash_ref, ref_index + 1);
-			std::vector<uint32_t> lengthsref;
-			for (const std::vector<uint8_t> &mtpData : zProofMTPref) {
-				lengthsref.push_back((uint32_t)mtpData.size());
-			}
-			if (lengthsref.size() != 22)
-				printf("******************* length different of 22 ************** %d\n", lengthsref.size());
+			std::deque<std::vector<uint8_t>> zProofMTP3 = TheTree.getProofOrdered(hash_ref, ref_index + 1);
 
-			nProofMTP[(j * 3 - 1) * 441]= (unsigned char)(lengthsref.size());
+			nProofMTP[(j * 3 - 1) * 353] = (unsigned char)(zProofMTP3.size());
 
-			std::memcpy(nProofMTP+ 1 + (j * 3 - 1) * 441,(unsigned char*)lengthsref.data(),lengthsref.size()*4);
-
-			k2 = 0;
-			for (const std::vector<uint8_t> &mtpData : zProofMTPref) {
-				std::copy(mtpData.begin(), mtpData.end(), nProofMTP + ((j * 3 - 1) * 441 + 22 * 4 + 1 + k2*mtpData.size()));
-				k2++;
+			int k3 = 0;
+			for (const std::vector<uint8_t> &mtpData : zProofMTP3) {
+				std::copy(mtpData.begin(), mtpData.end(), nProofMTP + ((j * 3 - 1) * 353 + 1 + k3 * mtpData.size()));
+				k3++;
 			}
 
 

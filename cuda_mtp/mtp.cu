@@ -18,7 +18,7 @@ extern void mtp_fill(const uint64_t *Block, uint32_t offset);
 #define HASHLEN 32
 #define SALTLEN 16
 #define PWD "password"
-
+//#define MTP_L 64
 
 static bool init[MAX_GPUS] = { 0 };
 static __thread uint32_t throughput = 0;
@@ -106,8 +106,8 @@ do  {
 			uint256 TheUint256Target[1];
 			TheUint256Target[0] = ((uint256*)ptarget)[0];
 
-			blockS nBlockMTP[72*2];
-			unsigned char nProofMTP[72*3*441];
+			blockS nBlockMTP[MTP_L *2];
+			unsigned char nProofMTP[MTP_L * 3 * 353 ];
 			
 			uint32_t is_sol = mtp_solver(foundNonce, &instance, nBlockMTP,nProofMTP, TheMerkleRoot, mtpHashValue, ordered_tree, endiandata,TheUint256Target[0]);
 
@@ -124,13 +124,13 @@ do  {
 			for (int i = 0; i<32; i++)
 				mtp->mtpHashValue[i] = mtpHashValue[i];
 			
-			for (int j=0;j<(72*2);j++)
+			for (int j=0;j<(MTP_L * 2);j++)
 				for (int i=0;i<128;i++)
 				mtp->nBlockMTP[j][i]= nBlockMTP[j].v[i];
                 int lenMax =0; 
 				int len = 0;
 
-				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)*72*3*441);
+				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)* MTP_L * 3 * 353);
 
 
 				printf("found a solution");

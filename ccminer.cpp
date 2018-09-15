@@ -1086,10 +1086,9 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 	uint32_t SizeMerkleRoot = 16;
 	uint32_t SizeReserved = 64;
 	uint32_t SizeMtpHash = 32;
-	uint32_t SizeBlockMTP = 72*2*128*8;
-	uint32_t SizeProofMTP = 72*3*441;
-//	for (int i=0;i<72*3;i++)
-//	SizeProofMTP += mtp->sizeProofMTP[i];
+	uint32_t SizeBlockMTP = MTP_L *2*128*8;
+	uint32_t SizeProofMTP = MTP_L *3*353;
+
 	
 
 
@@ -1128,7 +1127,7 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 	}
 
 
-	for (uint32_t i = 0; i < 72*2; i++)
+	for (uint32_t i = 0; i < MTP_L *2; i++)
 	{
 		for (uint32_t j = 0; j < 1024; j++)
 			sprintf(&blockmtp_str[2*(j + 1024*i)], "%02x", ((uchar*)mtp->nBlockMTP[i])[j]);
@@ -1136,7 +1135,7 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 
 
 	
-	for (int i = 0;i< 72*3*441;i++)
+	for (int i = 0;i< SizeProofMTP;i++)
 	sprintf(&proofmtp_str[2*i],"%02x",mtp->nProofMTP[i]);
 
 

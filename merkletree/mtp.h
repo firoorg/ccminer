@@ -28,7 +28,7 @@ class CBlock;
 /* Size of MTP proof */
 const unsigned int MTP_PROOF_SIZE = 1471;// 1431;
 /* Size of MTP block proof size */
-const unsigned int MTP_BLOCK_PROOF_SIZE = 72;
+const unsigned int MTP_BLOCK_PROOF_SIZE = 64;
 /* Size of MTP block */
 const unsigned int MTP_BLOCK_SIZE = 140;
 
