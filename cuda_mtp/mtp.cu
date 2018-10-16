@@ -77,19 +77,32 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 //	((uint32_t*)pdata)[19] = 0;
 	argon2_context context = init_argon2d_param((const char*)endiandata);
 
+//	if (work_restart[thr_id].restart) goto TheEnd;
+
 	argon2_instance_t instance;
 	argon2_ctx_from_mtp(&context, &instance);
+
+//	if (work_restart[thr_id].restart) goto TheEnd;
+
 	TheElements = mtp_init(&instance, TheMerkleRoot);
 	MerkleTree ordered_tree(TheElements, true);
+
+//	if (work_restart[thr_id].restart) goto TheEnd;
+
 	MerkleTree::Buffer root = ordered_tree.getRoot();
 	std::copy(root.begin(), root.end(), TheMerkleRoot);
 
+//	if (work_restart[thr_id].restart) goto TheEnd;
+
 	mtp_setBlockTarget(endiandata,ptarget,&TheMerkleRoot);
+
+	if (work_restart[thr_id].restart) goto TheEnd;
+
 printf("filling memory\n");
-for (int i=0;i<memcost;i++)
+for (int i=0;i<memcost && !work_restart[thr_id].restart;i++)
 	mtp_fill(instance.memory[i].v,i);
 printf("memory filled \n");
-
+	if (work_restart[thr_id].restart) goto TheEnd;
 do  {
 		int order = 0;
 		uint32_t foundNonce;
@@ -151,7 +164,9 @@ do  {
 */
 		pdata[19] += throughput;
 //		be32enc(&endiandata[19], pdata[19]);
-	}   while (!work_restart[thr_id].restart && pdata[19]<0xeffffff);
+	}   while (!work_restart[thr_id].restart && pdata[19]<0xffffffff);
+
+TheEnd:
 	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
 	*hashes_done = pdata[19] - first_nonce;
 //	delete TheTree;

@@ -1701,23 +1701,40 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		char coinb6[74] = { 0 };
 		char coinb7[90] = { 0 };
 		char script_payee[1024];
-/*  // for mainnet
+
+
+		/*  // for mainnet
 		base58_decode("aCAgTPgtYcA4EysU4UKC86EQd5cTtHtCcr", script_payee);
-		job_pack_tx(coinb1, 100000000, script_payee);
+		job_pack_tx(coinb1, 50000000, script_payee);
 
 		base58_decode("aHu897ivzmeFuLNB6956X6gyGeVNHUBRgD", script_payee);
-		job_pack_tx(coinb2, 100000000, script_payee);
+		job_pack_tx(coinb2, 50000000, script_payee);
 
 		base58_decode("aQ18FBVFtnueucZKeVg4srhmzbpAeb1KoN", script_payee);
-		job_pack_tx(coinb3, 100000000, script_payee);
+		job_pack_tx(coinb3, 50000000, script_payee);
 
 		base58_decode("a1HwTdCmQV3NspP2QqCGpehoFpi8NY4Zg3", script_payee);
-		job_pack_tx(coinb4, 300000000, script_payee);
+		job_pack_tx(coinb4, 150000000, script_payee);
 
 		base58_decode("a1kCCGddf5pMXSipLVD9hBG2MGGVNaJ15U", script_payee);
-		job_pack_tx(coinb5, 100000000, script_payee);
-*/
+		job_pack_tx(coinb5, 50000000, script_payee);
+		*/
+		/* for testnet with znode payment
+		base58_decode("TDk19wPKYq91i18qmY6U9FeTdTxwPeSveo", script_payee);
+		job_pack_tx(coinb1, 50000000, script_payee);
 
+		base58_decode("TWZZcDGkNixTAMtRBqzZkkMHbq1G6vUTk5", script_payee);
+		job_pack_tx(coinb2, 50000000, script_payee);
+
+		base58_decode("TRZTFdNCKCKbLMQV8cZDkQN9Vwuuq4gDzT", script_payee);
+		job_pack_tx(coinb3, 50000000, script_payee);
+
+		base58_decode("TG2ruj59E5b1u9G3F7HQVs6pCcVDBxrQve", script_payee);
+		job_pack_tx(coinb4, 150000000, script_payee);
+
+		base58_decode("TCsTzQZKVn4fao8jDmB9zQBk9YQNEZ3XfS", script_payee);
+		job_pack_tx(coinb5, 50000000, script_payee);
+		*/
 		base58_decode("TDk19wPKYq91i18qmY6U9FeTdTxwPeSveo", script_payee);
 		job_pack_tx(coinb1, 100000000, script_payee);
 
@@ -1728,10 +1745,13 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		job_pack_tx(coinb3, 100000000, script_payee);
 
 		base58_decode("TG2ruj59E5b1u9G3F7HQVs6pCcVDBxrQve", script_payee);
-		job_pack_tx(coinb4, 300000000, script_payee);
+		job_pack_tx(coinb4, 100000000, script_payee);
 
 		base58_decode("TCsTzQZKVn4fao8jDmB9zQBk9YQNEZ3XfS", script_payee);
 		job_pack_tx(coinb5, 100000000, script_payee);
+
+
+
 
 		if (mpay && json_integer_value(mnamount)!=0) {
 		base58_decode((char*)json_string_value(mnaddy), script_payee);
@@ -3578,6 +3598,7 @@ wait_lp_url:
 longpoll_retry:
 
 	while (!abort_flag) {
+		char *req = NULL;
 		json_t *val = NULL, *soval;
 		int err = 0;
 
@@ -3601,18 +3622,33 @@ longpoll_retry:
 			}
 			continue;
 		}
-
+		if (have_gbt) {
+			req = (char*)malloc(strlen(gbt_lp_req) + strlen(lp_id) + 1);
+			sprintf(req, gbt_lp_req, lp_id);
+		val = json_rpc_longpoll(curl, lp_url, pool, req, &err);
+		} else 
 		val = json_rpc_longpoll(curl, lp_url, pool, rpc_req, &err);
+
 		if (have_stratum || switchn != pool_switch_count) {
 			if (val)
 				json_decref(val);
 			goto need_reinit;
 		}
 		if (likely(val)) {
+			bool rc;
 			soval = json_object_get(json_object_get(val, "result"), "submitold");
 			submit_old = soval ? json_is_true(soval) : false;
 			pthread_mutex_lock(&g_work_lock);
-			if (work_decode(json_object_get(val, "result"), &g_work)) {
+			if (have_gbt) 
+			{
+				if (opt_algo == ALGO_MTP)
+					rc = gbt_work_decode_mtp(json_object_get(val, "result"), &g_work);
+				else
+					rc = gbt_work_decode(json_object_get(val, "result"), &g_work);
+			} else 
+			rc = work_decode(json_object_get(val, "result"), &g_work);
+
+			if (rc) {
 				restart_threads();
 				if (!opt_quiet) {
 					char netinfo[64] = { 0 };
