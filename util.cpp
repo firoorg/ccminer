@@ -922,6 +922,18 @@ size_t address_to_script(unsigned char *out, size_t outsz, const char *addr)
 	}
 }
 
+size_t nulldata_to_script(unsigned char *out,unsigned char *mess)
+{
+
+		out[0] = 0x6a;  /* OP_RETURN */
+		out[1] = 0x04;  /* length */
+		out[2] = mess[0];
+		out[3] = mess[1];
+		out[4] = mess[2];
+		out[5] = mess[3];
+		return 6;
+	
+}
 
 
 /* Subtract the `struct timeval' values X and Y,

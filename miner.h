@@ -595,6 +595,7 @@ extern bool hex2bin(void *output, const char *hexstr, size_t len);
 extern bool jobj_binary(const json_t *obj, const char *key, void *buf, size_t buflen);
 int varint_encode(unsigned char *p, uint64_t n);
 size_t address_to_script(unsigned char *out, size_t outsz, const char *addr);
+size_t nulldata_to_script(unsigned char *out, unsigned char *mess);
 extern int timeval_subtract(struct timeval *result, struct timeval *x,
 	struct timeval *y);
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);

@@ -28,6 +28,7 @@
 #ifdef WIN32
 #include <windows.h>
 #include <stdint.h>
+#include <process.h>
 #else
 #include <errno.h>
 #include <sys/resource.h>
@@ -53,7 +54,7 @@ BOOL WINAPI ConsoleHandler(DWORD);
 #endif
 
 #define PROGRAM_NAME		"ccminer"
-#define LP_SCANTIME		60
+#define LP_SCANTIME		20
 #define HEAVYCOIN_BLKHDR_SZ		84
 #define MNR_BLKHDR_SZ 80
 
@@ -82,7 +83,7 @@ struct workio_cmd {
 
 bool opt_debug = false;
 bool opt_debug_diff = false;
-bool opt_debug_threads = false;
+bool opt_debug_threads = true;
 bool opt_protocol = false;
 bool opt_benchmark = false;
 bool opt_showdiff = true;
@@ -1077,6 +1078,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 
 static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *mtp)
 {
+//	restart_threads();
 	char s[512];
 	struct pool_infos *pool = &pools[work->pooln];
 	json_t *val, *res, *reason;
@@ -1191,7 +1193,7 @@ printf("%s%s%s%s%s%s%s\n", data_str, mtphashvalue_str, mtpreserved_str, merklero
 			applog(LOG_ERR, "submit_upstream_work json_rpc_call failed");
 			return false;
 		}
-
+		
 		res = json_object_get(val, "result");
 		if (json_is_object(res)) {
 			char *res_str;
@@ -1331,6 +1333,7 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 	// build coinbase transaction 
 	tmp = json_object_get(val, "coinbasetxn");
 	if (tmp) {
+printf("printf coinbase txn\n");
 		const char *cbtx_hex = json_string_value(json_object_get(tmp, "data"));
 		cbtx_size = cbtx_hex ? (int)strlen(cbtx_hex) / 2 : 0;
 		cbtx = (uchar*)malloc(cbtx_size + 100);
@@ -1523,7 +1526,8 @@ out:
 
 static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 {
-
+printf("coming in getblocktemplate\n");
+//restart_threads();
 	int i, n;
 	uint32_t version, curtime, bits;
 	uint32_t prevhash[8];
@@ -1569,6 +1573,9 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		applog(LOG_ERR, "JSON invalid height");
 		goto out;
 	}
+	if (work->height == (int)json_integer_value(tmp))
+							return false;
+
 	work->height = (int)json_integer_value(tmp);
 	applog(LOG_BLUE, "Current block is %d", work->height);
 
@@ -1603,8 +1610,14 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		applog(LOG_ERR, "JSON invalid curtime");
 		goto out;
 	}
-	curtime = (uint32_t)json_integer_value(tmp);
 
+//	srand((uint32_t)_getpid());
+	srand(time(NULL) - _getpid());
+	uint32_t ranraw[1] = {rand() };
+	uint32_t Addran = ranraw[0]%10;
+
+	curtime = (uint32_t)json_integer_value(tmp);
+//	curtime += Addran;
 	if (unlikely(!jobj_binary(val, "bits", &bits, sizeof(bits)))) {
 		applog(LOG_ERR, "JSON invalid bits");
 		goto out;
@@ -1666,6 +1679,8 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		printf("mn amount %d", json_integer_value(mnamount));
 */
 		}
+		unsigned char pk_null[6];
+		size_t pk_null_size = nulldata_to_script(pk_null,(unsigned char*)ranraw);
 		cbvalue = (int64_t)(json_is_integer(tmp) ? json_integer_value(tmp) : json_number_value(tmp));
 		cbtx = (uchar*)malloc(256*256);
 		le32enc((uint32_t *)cbtx, 1); // version /
@@ -1681,7 +1696,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		le32enc((uint32_t *)(cbtx + cbtx_size), 0xffffffff); // sequence /
 		cbtx_size += 4;
 		
-		cbtx[cbtx_size++] = (mpay && json_integer_value(mnamount)!=0)? 7:6; // out-counter /
+		cbtx[cbtx_size++] = (mpay && json_integer_value(mnamount)!=0)? 8:7; // out-counter /
 
 		le32enc((uint32_t *)(cbtx + cbtx_size), (uint32_t)cbvalue); // value /
 		le32enc((uint32_t *)(cbtx + cbtx_size + 4), cbvalue >> 32);
@@ -1689,6 +1704,13 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		cbtx[cbtx_size++] = (uint8_t)pk_script_size; // txout-script length /
 		memcpy(cbtx + cbtx_size, pk_script, pk_script_size);
 		cbtx_size += (int)pk_script_size;
+////// null data
+		le32enc((uint32_t *)(cbtx + cbtx_size), (uint32_t)0); // value /
+		le32enc((uint32_t *)(cbtx + cbtx_size + 4), 0 >> 32);
+		cbtx_size += 8;
+		cbtx[cbtx_size++] = (uint8_t)pk_null_size; // txout-script length /
+		memcpy(cbtx + cbtx_size, pk_null, pk_null_size);
+		cbtx_size += (int)pk_null_size;
 
 		/// append here dev fee and masternode payment ////
 		/*   test */
@@ -1719,7 +1741,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		base58_decode("a1kCCGddf5pMXSipLVD9hBG2MGGVNaJ15U", script_payee);
 		job_pack_tx(coinb5, 50000000, script_payee);
 		*/
-		/* for testnet with znode payment
+		// for testnet with znode payment
 		base58_decode("TDk19wPKYq91i18qmY6U9FeTdTxwPeSveo", script_payee);
 		job_pack_tx(coinb1, 50000000, script_payee);
 
@@ -1734,25 +1756,9 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 
 		base58_decode("TCsTzQZKVn4fao8jDmB9zQBk9YQNEZ3XfS", script_payee);
 		job_pack_tx(coinb5, 50000000, script_payee);
-		*/
-		base58_decode("TDk19wPKYq91i18qmY6U9FeTdTxwPeSveo", script_payee);
-		job_pack_tx(coinb1, 100000000, script_payee);
+		
 
-		base58_decode("TWZZcDGkNixTAMtRBqzZkkMHbq1G6vUTk5", script_payee);
-		job_pack_tx(coinb2, 100000000, script_payee);
-
-		base58_decode("TRZTFdNCKCKbLMQV8cZDkQN9Vwuuq4gDzT", script_payee);
-		job_pack_tx(coinb3, 100000000, script_payee);
-
-		base58_decode("TG2ruj59E5b1u9G3F7HQVs6pCcVDBxrQve", script_payee);
-		job_pack_tx(coinb4, 100000000, script_payee);
-
-		base58_decode("TCsTzQZKVn4fao8jDmB9zQBk9YQNEZ3XfS", script_payee);
-		job_pack_tx(coinb5, 100000000, script_payee);
-
-
-
-
+		
 		if (mpay && json_integer_value(mnamount)!=0) {
 		base58_decode((char*)json_string_value(mnaddy), script_payee);
 		job_pack_tx(coinb6, json_integer_value(mnamount), script_payee);
@@ -1961,7 +1967,7 @@ static bool gbt_info(const json_t *val, struct work *work)
 	return true;
 }
 
-#define GBT_CAPABILITIES "[\"coinbasetxn\", \"coinbasevalue\", \"longpoll\", \"workid\"]"
+#define GBT_CAPABILITIES "[\"coinbasetxn\", \"coinbasevalue\", \"longpoll\", \"workid\", \"coinbase/append\",\"coinbaseaux\"]"
 
 static const char *gbt_req =
 "{\"method\": \"getblocktemplate\", \"params\": [{\"capabilities\": "
@@ -2110,6 +2116,7 @@ start:
 		rc = gbt_work_decode_mtp(json_object_get(val, "result"), work);
 	else 
 		rc = gbt_work_decode(json_object_get(val, "result"), work);
+
 		if (!have_gbt) {
 			json_decref(val);
 			goto start;
@@ -2746,6 +2753,7 @@ static bool wanna_mine(int thr_id)
 
 static void *miner_thread(void *userdata)
 {
+printf("entering miner thread\n");
 	struct thr_info *mythr = (struct thr_info *)userdata;
 	struct mtp * mtp = (struct mtp*)malloc(sizeof(struct mtp));
 	int switchn = pool_switch_count;
@@ -2890,6 +2898,7 @@ static void *miner_thread(void *userdata)
 				if (opt_debug && g_work_time && !opt_quiet)
 					applog(LOG_DEBUG, "work time %u/%us nonce %x/%x", secs, scan_time, nonceptr[0], end_nonce);
 				/* obtain new work from internal workio thread */
+			
 				if (unlikely(!get_work(mythr, &g_work))) {
 					pthread_mutex_unlock(&g_work_lock);
 					if (switchn != pool_switch_count) {
@@ -2900,10 +2909,12 @@ static void *miner_thread(void *userdata)
 						goto out;
 					}
 				}
+			
 				g_work_time = time(NULL);
 			}
 		}
-
+		printf("coming here when\n");
+		printf("work.height =%d g_work.height=%d",work.height,g_work.height);
 		if (!opt_benchmark && (g_work.height != work.height || memcmp(work.target, g_work.target, sizeof(work.target))))
 		{
 			if (opt_debug) {
@@ -3520,6 +3531,7 @@ static void *miner_thread(void *userdata)
 
 				nonceptr[0] = curnonce;
 			}
+
 		}
 	}
 
@@ -3636,21 +3648,30 @@ longpoll_retry:
 		}
 		if (likely(val)) {
 			bool rc;
-			soval = json_object_get(json_object_get(val, "result"), "submitold");
-			submit_old = soval ? json_is_true(soval) : false;
+			char *start_job_id;
+			double start_diff = 0.0;
+			//soval = json_object_get(json_object_get(val, "result"), "submitold");
+			//submit_old = soval ? json_is_true(soval) : false;
 			pthread_mutex_lock(&g_work_lock);
+			start_job_id = g_work.job_id ? strdup(g_work.job_id) : NULL;
 			if (have_gbt) 
 			{
-				if (opt_algo == ALGO_MTP)
+				if (opt_algo == ALGO_MTP) {
+					 // rc = 1;
+//					sleep(5);
+//					val = json_rpc_longpoll(curl, lp_url, pool, req, &err);
 					rc = gbt_work_decode_mtp(json_object_get(val, "result"), &g_work);
-				else
+			}	else
 					rc = gbt_work_decode(json_object_get(val, "result"), &g_work);
 			} else 
 			rc = work_decode(json_object_get(val, "result"), &g_work);
 
 			if (rc) {
-				restart_threads();
-				if (!opt_quiet) {
+//				bool newblock = g_work.job_id && strcmp(start_job_id, g_work.job_id);
+//				newblock |= (start_diff != net_diff); // the best is the height but... longpoll...
+//			if (newblock) {
+				start_diff = net_diff;
+//				if (!opt_quiet) {
 					char netinfo[64] = { 0 };
 					if (net_diff > 0.) {
 						sprintf(netinfo, ", diff %.3f", net_diff);
@@ -3662,8 +3683,10 @@ longpoll_retry:
 						applog(LOG_BLUE, "%s block %u%s", algo_names[opt_algo], g_work.height, netinfo);
 					else
 						applog(LOG_BLUE, "%s detected new block%s", short_url, netinfo);
-				}
+//				}
 				g_work_time = time(NULL);
+				restart_threads();
+//			  }
 			}
 			pthread_mutex_unlock(&g_work_lock);
 			json_decref(val);
@@ -4660,7 +4683,7 @@ int main(int argc, char *argv[])
 	struct thr_info *thr;
 	long flags;
 	int i;
-
+	
 	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by djm34 ***\n");
 #ifdef _MSC_VER
 	printf("    Built with VC++ %d and nVidia CUDA SDK %d.%d\n\n", msver(),

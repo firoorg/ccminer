@@ -25,7 +25,7 @@ static __thread uint32_t throughput = 0;
 
 extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp)
 {
-
+//	if (work_restart[thr_id].restart) return 0;
 	unsigned char TheMerkleRoot[16];
 	unsigned char mtpHashValue[32];
 	MerkleTree::Elements TheElements; // = new MerkleTree;
@@ -146,9 +146,9 @@ do  {
 				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)* MTP_L * 3 * 353);
 
 
-				printf("found a solution");
+				printf("found a solution\n");
 				free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
-
+				
 				return res;
 
 			} else {
