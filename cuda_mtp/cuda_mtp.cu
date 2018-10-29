@@ -14,7 +14,7 @@ static uint32_t *d_MinNonces[16];
 __constant__ uint32_t pTarget[8];
 __constant__ uint32_t pData[20]; // truncated data
 __constant__ uint4 Elements[1];
-uint4 * HBlock;
+__device__ uint4 * HBlock;
 
 #define ARGON2_SYNC_POINTS 4
 #define argon_outlen 32
@@ -424,7 +424,7 @@ __host__
 void mtp_fill(const uint64_t *Block,uint32_t offset)
 {
 
-uint4 *Blockptr   = &HBlock[offset*64];
+	 uint4 *Blockptr   = &HBlock[offset*64];
 	cudaMemcpyAsync(Blockptr, Block, 256 * sizeof(uint32_t), cudaMemcpyHostToDevice);
 }
 

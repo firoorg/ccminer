@@ -591,7 +591,7 @@ MerkleTree TheTree,uint32_t* input, uint256 hashTarget) {
 	return 0;
 }
 
-MerkleTree::Elements mtp_init( argon2_instance_t *instance, unsigned char *resultMerkleRoot) {
+MerkleTree::Elements mtp_init( argon2_instance_t *instance) {
 	//internal_kat(instance, r); /* Print all memory blocks */
 	printf("Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory \n");
 	// Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory

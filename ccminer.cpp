@@ -1679,8 +1679,7 @@ printf("coming in getblocktemplate\n");
 		printf("mn amount %d", json_integer_value(mnamount));
 */
 		}
-		unsigned char pk_null[6];
-		size_t pk_null_size = nulldata_to_script(pk_null,(unsigned char*)ranraw);
+
 		cbvalue = (int64_t)(json_is_integer(tmp) ? json_integer_value(tmp) : json_number_value(tmp));
 		cbtx = (uchar*)malloc(256*256);
 		le32enc((uint32_t *)cbtx, 1); // version /
@@ -1689,14 +1688,17 @@ printf("coming in getblocktemplate\n");
 		le32enc((uint32_t *)(cbtx + 37), 0xffffffff); // prev txout index /
 		cbtx_size = 43;
 		// BIP 34: height in coinbase /
-		for (n = work->height; n; n >>= 8)
-			cbtx[cbtx_size++] = n & 0xff;
+//		for (n = work->height; n; n >>= 8)
+//			cbtx[cbtx_size++] = n & 0xff;
+		cbtx[cbtx_size++] = 04;
+		for (int i=0;i<4;i++)
+		cbtx[cbtx_size++] = ((unsigned char*)ranraw)[i];
 		cbtx[42] = cbtx_size - 43;
 		cbtx[41] = cbtx_size - 42; // scriptsig length /
 		le32enc((uint32_t *)(cbtx + cbtx_size), 0xffffffff); // sequence /
 		cbtx_size += 4;
 		
-		cbtx[cbtx_size++] = (mpay && json_integer_value(mnamount)!=0)? 8:7; // out-counter /
+		cbtx[cbtx_size++] = (mpay && json_integer_value(mnamount)!=0)? 7:6; // out-counter /
 
 		le32enc((uint32_t *)(cbtx + cbtx_size), (uint32_t)cbvalue); // value /
 		le32enc((uint32_t *)(cbtx + cbtx_size + 4), cbvalue >> 32);
@@ -1705,12 +1707,12 @@ printf("coming in getblocktemplate\n");
 		memcpy(cbtx + cbtx_size, pk_script, pk_script_size);
 		cbtx_size += (int)pk_script_size;
 ////// null data
-		le32enc((uint32_t *)(cbtx + cbtx_size), (uint32_t)0); // value /
-		le32enc((uint32_t *)(cbtx + cbtx_size + 4), 0 >> 32);
-		cbtx_size += 8;
-		cbtx[cbtx_size++] = (uint8_t)pk_null_size; // txout-script length /
-		memcpy(cbtx + cbtx_size, pk_null, pk_null_size);
-		cbtx_size += (int)pk_null_size;
+//		le32enc((uint32_t *)(cbtx + cbtx_size), (uint32_t)0); // value /
+//		le32enc((uint32_t *)(cbtx + cbtx_size + 4), 0 >> 32);
+//		cbtx_size += 8;
+//		cbtx[cbtx_size++] = (uint8_t)pk_null_size; // txout-script length /
+//		memcpy(cbtx + cbtx_size, pk_null, pk_null_size);
+//		cbtx_size += (int)pk_null_size;
 
 		/// append here dev fee and masternode payment ////
 		/*   test */

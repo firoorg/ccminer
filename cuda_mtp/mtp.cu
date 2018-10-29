@@ -33,7 +33,7 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = 0; //pdata[19];
-
+	int dev_id;
 	if (opt_benchmark)
 		ptarget[7] = 0x00ff;
 
@@ -42,11 +42,12 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 
 	if (!init[thr_id])
 	{
-		int dev_id = device_map[thr_id];
+		dev_id = device_map[thr_id];
 		cudaSetDevice(dev_id);
 		
 		cudaDeviceReset();
-		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+//		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+//		cudaSetDeviceFlags(cudaDeviceScheduleYield);
 
 		int intensity = (device_sm[dev_id] >= 500 && !is_windows()) ? 17 : 16;
 		if (device_sm[device_map[thr_id]] == 500) intensity = 15;
@@ -74,25 +75,15 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 		be32enc(&endiandata[k], pdata[k]);
 
 
-//	((uint32_t*)pdata)[19] = 0;
+
 	argon2_context context = init_argon2d_param((const char*)endiandata);
-
-//	if (work_restart[thr_id].restart) goto TheEnd;
-
 	argon2_instance_t instance;
 	argon2_ctx_from_mtp(&context, &instance);
-
-//	if (work_restart[thr_id].restart) goto TheEnd;
-
-	TheElements = mtp_init(&instance, TheMerkleRoot);
+	TheElements = mtp_init(&instance);
 	MerkleTree ordered_tree(TheElements, true);
-
-//	if (work_restart[thr_id].restart) goto TheEnd;
-
 	MerkleTree::Buffer root = ordered_tree.getRoot();
 	std::copy(root.begin(), root.end(), TheMerkleRoot);
 
-//	if (work_restart[thr_id].restart) goto TheEnd;
 
 	mtp_setBlockTarget(endiandata,ptarget,&TheMerkleRoot);
 

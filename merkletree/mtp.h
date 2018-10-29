@@ -60,4 +60,4 @@ int mtp_solver(uint32_t TheNonce, argon2_instance_t *instance,
 	blockS *nBlockMTP /*[72 * 2][128]*/, unsigned char *nProofMTP, unsigned char* resultMerkleRoot, unsigned char* mtpHashValue,
 	MerkleTree TheTree, uint32_t* input, uint256 hashTarget);
 
-MerkleTree::Elements mtp_init(argon2_instance_t *instance,  unsigned char *resultMerkleRoot);
+MerkleTree::Elements mtp_init(argon2_instance_t *instance);
