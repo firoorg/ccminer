@@ -1611,8 +1611,13 @@ printf("coming in getblocktemplate\n");
 		goto out;
 	}
 
-//	srand((uint32_t)_getpid());
-	srand(time(NULL) - _getpid());
+// random seed initialized with time and pid
+#ifdef _MSC_VER 		
+	srand(time(NULL) - _getpid()); 
+#elif __GNUC__
+	srand(time(NULL) - getpid()); 
+#endif		
+	
 	uint32_t ranraw[1] = {rand() };
 	uint32_t Addran = ranraw[0]%10;
 
