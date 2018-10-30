@@ -1615,7 +1615,7 @@ printf("coming in getblocktemplate\n");
 #ifdef _MSC_VER 		
 	srand(time(NULL) - _getpid()); 
 #elif __GNUC__
-	srand(time(NULL) - getpid()); 
+	srand(time(NULL) - getpid());
 #endif		
 	
 	uint32_t ranraw[1] = {rand() };

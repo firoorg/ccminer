@@ -13,7 +13,7 @@ extern void mtp_cpu_init(int thr_id, uint32_t threads);
 extern uint32_t mtp_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce);
 
 extern void mtp_setBlockTarget(const void* pDataIn, const void *pTargetIn, const void * zElement);
-extern void mtp_fill(const uint64_t *Block, uint32_t offset);
+extern void mtp_fill(const uint64_t *Block, uint32_t offset, uint32_t datachunk);
 
 #define HASHLEN 32
 #define SALTLEN 16
@@ -90,8 +90,13 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 	if (work_restart[thr_id].restart) goto TheEnd;
 
 printf("filling memory\n");
-for (int i=0;i<memcost && !work_restart[thr_id].restart;i++)
-	mtp_fill(instance.memory[i].v,i);
+const int datachunk = 128;
+for (int i=0;i<(memcost/ datachunk) && !work_restart[thr_id].restart;i++) {
+    uint64_t Truc[128* datachunk];
+	for (int j=0;j<datachunk;j++)
+		memcpy(Truc+ datachunk*j,instance.memory[datachunk*i+j].v,128*sizeof(uint64_t));
+	mtp_fill(Truc, i, datachunk);
+}
 printf("memory filled \n");
 	if (work_restart[thr_id].restart) goto TheEnd;
 do  {

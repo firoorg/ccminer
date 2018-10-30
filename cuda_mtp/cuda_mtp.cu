@@ -403,7 +403,6 @@ void mtp_cpu_init(int thr_id, uint32_t threads)
 
 printf("number of threads %d \n",threads);
 	cudaMalloc((void**)&HBlock, 256 * argon_memcost * sizeof(uint32_t) );
-
 	cudaMalloc(&d_MinNonces[thr_id], sizeof(uint32_t));
 	cudaMallocHost(&h_MinNonces[thr_id],  sizeof(uint32_t));
 }
@@ -421,11 +420,11 @@ void mtp_setBlockTarget(const void* pDataIn,const void *pTargetIn, const void * 
 }
 
 __host__
-void mtp_fill(const uint64_t *Block,uint32_t offset)
+void mtp_fill(const uint64_t *Block,uint32_t offset, uint32_t datachunk)
 {
 
-	 uint4 *Blockptr   = &HBlock[offset*64];
-	cudaMemcpyAsync(Blockptr, Block, 256 * sizeof(uint32_t), cudaMemcpyHostToDevice);
+	 uint4 *Blockptr   = &HBlock[offset*64* datachunk];
+	cudaMemcpyAsync(Blockptr, Block, datachunk * 256 * sizeof(uint32_t), cudaMemcpyHostToDevice);
 }
 
 __host__
