@@ -47,7 +47,7 @@ typedef struct mtp_Proof_ {
 	char proof[MTP_PROOF_SIZE]; 
 } mtp_Proof;
 
-
+void copy_blockS(blockS *dst, const block *src);
 
 void mtp_hash(char* output, const char* input, unsigned int d, uint32_t TheNonce);
 argon2_context init_argon2d_param(const char* input);

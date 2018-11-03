@@ -1618,11 +1618,11 @@ printf("coming in getblocktemplate\n");
 	srand(time(NULL) - getpid());
 #endif		
 	
-	uint32_t ranraw[1] = {rand() };
-	uint32_t Addran = ranraw[0]%10;
+	uint32_t ranraw[1]; 
+	ranraw[0] = (uint32_t)rand();
 
 	curtime = (uint32_t)json_integer_value(tmp);
-//	curtime += Addran;
+
 	if (unlikely(!jobj_binary(val, "bits", &bits, sizeof(bits)))) {
 		applog(LOG_ERR, "JSON invalid bits");
 		goto out;

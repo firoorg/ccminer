@@ -424,7 +424,15 @@ void mtp_fill(const uint64_t *Block,uint32_t offset, uint32_t datachunk)
 {
 
 	 uint4 *Blockptr   = &HBlock[offset*64* datachunk];
-	cudaMemcpyAsync(Blockptr, Block, datachunk * 256 * sizeof(uint32_t), cudaMemcpyHostToDevice);
+	 cudaError_t err = cudaMemcpyAsync(Blockptr, Block, datachunk * 256 * sizeof(uint32_t), cudaMemcpyHostToDevice);
+	
+	if (err != cudaSuccess)
+	{
+		printf("%s\n", cudaGetErrorName(err));
+		cudaDeviceReset();
+		exit(1);
+	}
+
 }
 
 __host__

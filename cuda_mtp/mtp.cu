@@ -90,12 +90,15 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 	if (work_restart[thr_id].restart) goto TheEnd;
 
 printf("filling memory\n");
-const int datachunk = 128;
+const int datachunk = 512;
 for (int i=0;i<(memcost/ datachunk) && !work_restart[thr_id].restart;i++) {
-    uint64_t Truc[128* datachunk];
+uint64_t *Truc =(uint64_t *) malloc(128* datachunk*sizeof(uint64_t));
+	
 	for (int j=0;j<datachunk;j++)
-		memcpy(Truc+ datachunk*j,instance.memory[datachunk*i+j].v,128*sizeof(uint64_t));
+		memcpy(&Truc[128*j],instance.memory[datachunk*i+j].v,128*sizeof(uint64_t));
+
 	mtp_fill(Truc, i, datachunk);
+	free(Truc);
 }
 printf("memory filled \n");
 	if (work_restart[thr_id].restart) goto TheEnd;
