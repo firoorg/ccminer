@@ -86,11 +86,11 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 
 
 	mtp_setBlockTarget(endiandata,ptarget,&TheMerkleRoot);
-
+const int datachunk = 512;
 	if (work_restart[thr_id].restart) goto TheEnd;
 
 printf("filling memory\n");
-const int datachunk = 512;
+
 for (int i=0;i<(memcost/ datachunk) && !work_restart[thr_id].restart;i++) {
 uint64_t *Truc =(uint64_t *) malloc(128* datachunk*sizeof(uint64_t));
 	
