@@ -2408,7 +2408,7 @@ err_out:
 static bool submit_work_mtp(struct thr_info *thr, const struct work *work_in, const struct mtp *mtp_in)
 {
 
-	struct workio_cmd *wc; // = (struct workio_cmd*)malloc(sizeof(workio_cmd*));;
+	struct workio_cmd *wc; // = (struct workio_cmd*)malloc(sizeof(workio_cmd*));
 						   /* fill out work request message */
 	wc = (struct workio_cmd *)calloc(1, sizeof(*wc));
 	if (!wc)

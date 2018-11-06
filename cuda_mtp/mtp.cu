@@ -79,6 +79,10 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 	argon2_context context = init_argon2d_param((const char*)endiandata);
 	argon2_instance_t instance;
 	argon2_ctx_from_mtp(&context, &instance);
+
+
+
+
 	TheElements = mtp_init(&instance);
 	MerkleTree ordered_tree(TheElements, true);
 	MerkleTree::Buffer root = ordered_tree.getRoot();
