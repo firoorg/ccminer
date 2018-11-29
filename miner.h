@@ -11,7 +11,7 @@ extern "C" {
 #include <inttypes.h>
 #include <sys/time.h>
 #include <pthread.h>
-#include <jansson.h>
+#include <bosjansson.h>
 #include <curl/curl.h>
 
 #ifdef _MSC_VER
@@ -590,6 +590,7 @@ extern void cbin2hex(char *out, const char *in, size_t len);
 
 extern void dbin2hex(char *s, const unsigned char *p, size_t len);
 extern char *bin2hex(const unsigned char *in, size_t len);
+extern char *abin2hex(const unsigned char *p, size_t len);
 extern bool hex2bin(void *output, const char *hexstr, size_t len);
 
 extern bool jobj_binary(const json_t *obj, const char *key, void *buf, size_t buflen);
@@ -601,6 +602,7 @@ extern int timeval_subtract(struct timeval *result, struct timeval *x,
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);
 void diff_to_target(uint32_t* target, double diff);
 void work_set_target(struct work* work, double diff);
+void work_set_target_mtp(struct work* work, uchar* target);
 double target_to_diff(uint32_t* target);
 extern void get_currentalgo(char* buf, int sz);
 
@@ -622,6 +624,7 @@ void bench_display_results();
 
 struct stratum_job {
 	char *job_id;
+	uchar ucjob_id[4];
 	unsigned char prevhash[32];
 	size_t coinbase_size;
 	unsigned char *coinbase;
@@ -657,7 +660,7 @@ struct stratum_ctx {
 
 	double next_diff;
 	double sharediff;
-
+	uchar* next_target;
 	char *session_id;
 	size_t xnonce1_size;
 	unsigned char *xnonce1;
@@ -686,8 +689,8 @@ struct work {
 	uint32_t data[48];
 	uint32_t target[8];
 	uint32_t maxvote;
-
-	char job_id[128];
+	
+	char job_id[128]; //[128];
 	size_t xnonce2_len;
 	uchar xnonce2[32];
 
@@ -801,14 +804,23 @@ json_t * json_rpc_longpoll(CURL *curl, char *lp_url, struct pool_infos*,
 
 bool stratum_socket_full(struct stratum_ctx *sctx, int timeout);
 bool stratum_send_line(struct stratum_ctx *sctx, char *s);
+bool stratum_send_line_bos(struct stratum_ctx *sctx, bos_t *s);
 char *stratum_recv_line(struct stratum_ctx *sctx);
 bool stratum_connect(struct stratum_ctx *sctx, const char *url);
 void stratum_disconnect(struct stratum_ctx *sctx);
 bool stratum_subscribe(struct stratum_ctx *sctx);
+bool stratum_subscribe_bos(struct stratum_ctx *sctx);
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass);
+bool stratum_authorize_bos(struct stratum_ctx *sctx, const char *user, const char *pass);
 bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
+bool stratum_handle_method_bos(struct stratum_ctx *sctx, const char *s);
 bool stratum_handle_method_m7(struct stratum_ctx *sctx, const char *s);
 void stratum_free_job(struct stratum_ctx *sctx);
+bool stratum_handle_method_bos_json(struct stratum_ctx *sctx, json_t *val);
+json_t* stratum_recv_line_c2(struct stratum_ctx *sctx);
+json_t *stratum_recv_line_bos(struct stratum_ctx *sctx);
+bool stratum_recv_line_compact(struct stratum_ctx *sctx);
+
 
 void hashlog_remember_submit(struct work* work, uint32_t nonce);
 void hashlog_remember_scan_range(struct work* work);

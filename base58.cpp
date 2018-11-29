@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <jansson.h>
+#include <bosjansson.h>
 //uint32_t htonla(uint32_t);
 
 static const int8_t b58digits[] = {

@@ -29,10 +29,10 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 	unsigned char TheMerkleRoot[16];
 	unsigned char mtpHashValue[32];
 	MerkleTree::Elements TheElements; // = new MerkleTree;
-
+printf("the job_id from mtp %s\n",work->job_id+8);
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
-	const uint32_t first_nonce = 0; //pdata[19];
+	const uint32_t first_nonce = pdata[19];
 	int dev_id;
 	if (opt_benchmark)
 		ptarget[7] = 0x00ff;
@@ -70,12 +70,12 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 	}
 
 	uint32_t _ALIGN(128) endiandata[20];
-	((uint32_t*)pdata)[19] = 0x00100000; // mtp version not the actual nonce
-	for (int k=0; k < 20; k++) 
-		be32enc(&endiandata[k], pdata[k]);
+	((uint32_t*)pdata)[19] = (pdata[20]); //*/0x00100000; // mtp version not the actual nonce
+//	((uint32_t*)pdata)[19] = 0x1000;
 
-
-
+	for (int k = 0; k < 20; k++) 
+		endiandata[k] = pdata[k];
+	
 	argon2_context context = init_argon2d_param((const char*)endiandata);
 	argon2_instance_t instance;
 	argon2_ctx_from_mtp(&context, &instance);
@@ -106,6 +106,7 @@ uint64_t *Truc =(uint64_t *) malloc(128* datachunk*sizeof(uint64_t));
 }
 printf("memory filled \n");
 	if (work_restart[thr_id].restart) goto TheEnd;
+		pdata[19] = first_nonce;
 do  {
 		int order = 0;
 		uint32_t foundNonce;
@@ -131,7 +132,7 @@ do  {
 				int res = 1;
 				work_set_target_ratio(work, vhash64);		
 
-				pdata[19] = swab32(foundNonce);
+				pdata[19] =/*swab32*/(foundNonce);
 
 /// fill mtp structure
 				mtp->MTPVersion = 0x1000;
@@ -149,7 +150,7 @@ do  {
 				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)* MTP_L * 3 * 353);
 
 
-				printf("found a solution\n");
+				printf("found a solution, nonce %08x\n",pdata[19]);
 				free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
 				
 				return res;

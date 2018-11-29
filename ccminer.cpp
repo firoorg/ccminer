@@ -81,8 +81,8 @@ struct workio_cmd {
 	int pooln;
 };
 
-bool opt_debug = false;
-bool opt_debug_diff = false;
+bool opt_debug = true;
+bool opt_debug_diff = true;
 bool opt_debug_threads = true;
 bool opt_protocol = false;
 bool opt_benchmark = false;
@@ -1094,17 +1094,82 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 	
 
 
+
+
+		if (pool->type & POOL_STRATUM) {
+			uint32_t sent = 0;
+			uint32_t ntime, nonce;
+			char *ntimestr, *noncestr, *xnonce2str, *nvotestr;
+
+			le32enc(&ntime, work->data[17]);
+			le32enc(&nonce, work->data[19]);
+			char *sobid = (char*)malloc(9);
+			sprintf(sobid,"%s",work->job_id+8);
+printf("sending the job_id %s\n", sobid);
+printf("ntime %08x %08x\n",ntime, work->data[17]);
+printf("nonce %08x\n", work->data[19]);
+		json_t *MyObject = json_object();
+		json_t *json_arr = json_array();
+		json_object_set_new(MyObject, "id", json_integer(4));
+		json_object_set_new(MyObject, "method", json_string("mining.submit"));
+		json_object_set_new(MyObject, "params", json_arr);
+		json_array_append(json_arr, json_string(rpc_user));
+
+		json_t * Truc = json_bytes(0, 0);
+
+		int Err = 0;
+	
+		uchar* hexjob_id = (uchar*)malloc(4);
+		hex2bin(hexjob_id, sobid, 8);
+		
+		free(sobid);
+		json_bytes_set(Truc, hexjob_id, 4);
+		json_array_append(json_arr, Truc);
+		Truc = json_bytes(0, 0);
+		Err = json_bytes_set(Truc, work->xnonce2, sizeof(uint64_t*));
+		json_array_append(json_arr, Truc);
+		Truc = json_bytes(0, 0);
+		json_bytes_set(Truc, (uchar*)&ntime, sizeof(uint32_t));
+		json_array_append(json_arr, Truc);
+		Truc = json_bytes(0, 0);
+		json_bytes_set(Truc, (uchar*)&nonce, sizeof(uint32_t));
+		json_array_append(json_arr, Truc);
+		Truc = json_bytes(0, 0);
+		json_bytes_set(Truc, mtp->MerkleRoot, SizeMerkleRoot);
+		json_array_append(json_arr, Truc);
+		Truc = json_bytes(0, 0);
+
+		json_bytes_set(Truc, (uchar*)mtp->nBlockMTP, SizeBlockMTP);
+
+		json_array_append(json_arr, Truc);
+		Truc = json_bytes(0, 0);
+		json_bytes_set(Truc, mtp->nProofMTP, SizeProofMTP);
+		json_array_append(json_arr, Truc);
+
+		json_error_t *boserror = (json_error_t *)malloc(sizeof(json_error_t));
+
+		bos_t *serialized = bos_serialize(MyObject, boserror);
+
+		stratum.sharediff = work->sharediff[0];
+
+		if (unlikely(!stratum_send_line_bos(&stratum, serialized))) {
+			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
+			return false;
+		}
+		//		stratum_recv_line_compact(&stratum);
+
+
+
+
+	}
+	else if (work->txs) { /* gbt */
+
 	uint32_t Block_Num = 140;
 
 
 	int data_size = 84;
 //	int data_size = 128;
 	int adata_sz = data_size / sizeof(uint32_t);
-
-
-
-
-
 
 	char *proofmtp_str = (char*)malloc(2*SizeProofMTP+1);
 	char *blockmtp_str = (char*)malloc(2*SizeBlockMTP+1);
@@ -1142,8 +1207,6 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 
 
 
-if (work->txs) { /* gbt */
-
 		char data_str[2 * sizeof(work->data) + 1];
 		char data_check[2* sizeof(work->data)+1];
 		char *req;
@@ -1176,16 +1239,7 @@ if (work->txs) { /* gbt */
 				"{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s%s%s\"], \"id\":4}\r\n",
 				data_str, mtphashvalue_str, mtpreserved_str, merkleroot_str, blockmtp_str, proofmtp_str, work->txs);
 		}
-/*
-printf("data_str %s\n", data_str);
-printf("mtphashvalue_str %s\n", mtphashvalue_str);
-printf("mtpreserved_str %s\n", mtpreserved_str);
-printf("merkleroot_str %s\n", merkleroot_str);
 
-
-printf("*****************************************************************************************************the whole data \n");
-printf("%s%s%s%s%s%s%s\n", data_str, mtphashvalue_str, mtpreserved_str, merkleroot_str, blockmtp_str, proofmtp_str, work->txs);
-*/
 		//	val = json_rpc_call(curl, rpc_url, rpc_userpass, req, NULL, 0);
 		val = json_rpc_call_pool(curl, pool, req, false, false, NULL);
 		free(req);
@@ -1214,15 +1268,15 @@ printf("%s%s%s%s%s%s%s\n", data_str, mtphashvalue_str, mtpreserved_str, merklero
 			share_result(json_is_null(res), work->pooln, work->sharediff[0], json_string_value(res));
 
 		json_decref(val);
-
+		free(proofmtp_str); 
+		free(blockmtp_str); 
+		free(merkleroot_str);
+		free(mtpreserved_str);
+		free(mtphashvalue_str);
 	}
 //free(proof_str);
 
-free(proofmtp_str); 
-free(blockmtp_str); 
-free(merkleroot_str);
-free(mtpreserved_str);
-free(mtphashvalue_str);
+
 	return true;
 }
 
@@ -2517,17 +2571,25 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	int i;
 
 	if (!sctx->job.job_id) {
-		// applog(LOG_WARNING, "stratum_gen_work: job not yet retrieved");
+		applog(LOG_WARNING, "stratum_gen_work: job not yet retrieved");
 		return false;
 	}
 
 	pthread_mutex_lock(&stratum_work_lock);
 
 	// store the job ntime as high part of jobid
+//	free(work->job_id);
+//	work->job_id = strdup(sctx->job.job_id);
+//	for (int i=0;i<4;i++)
+//	work->job_iduc[i] = sctx->job.ucjob_id[i];
+
 	snprintf(work->job_id, sizeof(work->job_id), "%07x %s",
 		be32dec(sctx->job.ntime) & 0xfffffff, sctx->job.job_id);
 	work->xnonce2_len = sctx->xnonce2_size;
 	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
+
+	printf("thefull job id %s\n",work->job_id);
+	printf("reduced job id %s\n", work->job_id+8);
 
 	// also store the block number
 	work->height = sctx->job.height;
@@ -2565,7 +2627,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	}
 	
 	/* Increment extranonce2 */
-	for (i = 0; i < (int)sctx->xnonce2_size && !++sctx->job.xnonce2[i]; i++);
+//	for (i = 0; i < (int)sctx->xnonce2_size && !++sctx->job.xnonce2[i]; i++);
 
 	/* Assemble block header */
 	memset(work->data, 0, sizeof(work->data));
@@ -2613,6 +2675,18 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		memcpy(&work->data[12], sctx->job.coinbase, 32); // merkle_root
 		work->data[20] = 0x80000000;
 		if (opt_debug) applog_hex(work->data, 80);
+	} else if (opt_algo == ALGO_MTP)
+	{
+		for (i = 0; i < 8; i++)
+			work->data[9 + i] = le32dec((uint32_t *)merkle_root + i);
+		work->data[17] = le32dec(sctx->job.ntime);
+		work->data[18] = le32dec(sctx->job.nbits);
+		work->data[20] = 0x00100000;
+
+		for (int k = 0; k < 20; k++) {
+			printf(" %08x", work->data[k]);
+		}
+		printf("\n");
 	} else {
 		for (i = 0; i < 8; i++)
 			work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
@@ -2660,6 +2734,9 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		opt_difficulty = 1.;
 
 	switch (opt_algo) {
+		case ALGO_MTP:
+				work_set_target_mtp(work, sctx->next_target);
+			break;
 		case ALGO_JACKPOT:
 		case ALGO_NEOSCRYPT:
 		case ALGO_SCRYPT:
@@ -2670,7 +2747,6 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		case ALGO_FRESH:
 		case ALGO_FUGUE256:
 		case ALGO_GROESTL:
-		case ALGO_MTP:   // this will probably have to be changed
 		case ALGO_LBRY:
 		case ALGO_LYRA2Z:
 		case ALGO_LYRA2v2:
@@ -2855,6 +2931,10 @@ printf("entering miner thread\n");
 				wcmpoft = (32 + 16) / 4;
 				wcmplen = 32;
 			break;
+			case ALGO_MTP:
+				wcmpoft = 0;
+				wcmplen = 84;
+				break;
 			default:
 				wcmplen = 76;
 				wcmpoft = 0;
@@ -2879,7 +2959,11 @@ printf("entering miner thread\n");
 			}
 			if (sleeptime && opt_debug && !opt_quiet)
 				applog(LOG_DEBUG, "sleeptime: %u ms", sleeptime*100);
-			nonceptr = (uint32_t*) (((char*)work.data) + wcmplen);
+
+			if (opt_algo==ALGO_MTP)
+				nonceptr = (uint32_t*) (((char*)work.data) + 76);
+			else 
+				nonceptr = (uint32_t*)(((char*)work.data) + wcmplen);
 			pthread_mutex_lock(&g_work_lock);
 			extrajob |= work_done;
 
@@ -2889,7 +2973,7 @@ printf("entering miner thread\n");
 			}
 			regen = regen || extrajob;
 
-			if (regen) {
+			if (regen || opt_algo == ALGO_MTP) {
 				work_done = false;
 				extrajob = false;
 			if (opt_algo == ALGO_M7) {
@@ -2920,8 +3004,7 @@ printf("entering miner thread\n");
 				g_work_time = time(NULL);
 			}
 		}
-		printf("coming here when\n");
-		printf("work.height =%d g_work.height=%d",work.height,g_work.height);
+
 		if (!opt_benchmark && (g_work.height != work.height || memcmp(work.target, g_work.target, sizeof(work.target))))
 		{
 			if (opt_debug) {
@@ -2940,7 +3023,7 @@ printf("entering miner thread\n");
 			wcmplen -= 4;
 		}
 
-		if (memcmp(&work.data[wcmpoft], &g_work.data[wcmpoft], wcmplen)) {
+		if (memcmp(&work.data[wcmpoft], &g_work.data[wcmpoft], wcmplen - 8)) {
 			#if 0
 			if (opt_debug) {
 				for (int n=0; n <= (wcmplen-8); n+=8) {
@@ -2953,10 +3036,13 @@ printf("entering miner thread\n");
 			}
 			#endif
 			memcpy(&work, &g_work, sizeof(struct work));
-			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
-		} else
-			nonceptr[0]++; //??
 
+			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
+		printf("*********************  this is a new one %08x \n", nonceptr[0]);
+		} else {
+			nonceptr[0]++; //??
+		printf("*********************  this isn't updated %08x \n",nonceptr[0]);
+		}
 		if (opt_algo == ALGO_DECRED) {
 			// suprnova job_id check without data/target/height change...
 			if (check_stratum_jobs && strcmp(work.job_id, g_work.job_id)) {
@@ -3221,6 +3307,8 @@ printf("entering miner thread\n");
 		cudaError_t err = cudaGetLastError();
 		if (err != cudaSuccess && !opt_quiet)
 			gpulog(LOG_WARNING, thr_id, "%s", cudaGetErrorString(err));
+
+//		memcpy(work.job_id,g_work.job_id,128);
 
 		/* scan nonces for a proof-of-work hash */
 		switch (opt_algo) {
@@ -3777,6 +3865,52 @@ out:
 	return ret;
 }
 
+
+static bool stratum_handle_response_json(json_t *val)
+{
+
+
+	struct timeval tv_answer, diff;
+	int num = 0;
+	json_t *err_val, *res_val, *id_val;
+	json_error_t err;
+	bool ret = false;
+	bool valid = false;
+
+	res_val = json_object_get(val, "result");
+	err_val = json_object_get(val, "error");
+	id_val = json_object_get(val, "id");
+
+	if (!id_val || json_is_null(id_val) || !res_val)
+		goto out;
+
+	// ignore late login answers
+
+		if (!res_val || json_integer_value(id_val) < 4)
+			goto out;
+
+		gettimeofday(&tv_answer, NULL);
+		timeval_subtract(&diff, &tv_answer, &stratum.tv_submit);
+		// store time required to the pool to answer to a submit
+		stratum.answer_msec = (1000 * diff.tv_sec) + (uint32_t)(0.001 * diff.tv_usec);
+
+		valid = json_is_true(res_val);
+
+		printf("err_val %s",json_dumps(err_val,0));
+		share_result(valid, stratum.pooln, stratum.sharediff, err_val ? json_string_value(json_array_get(err_val, 1)) : NULL);
+
+
+	ret = true;
+
+out:
+	if (val)
+		json_decref(val);
+
+	return ret;
+}
+
+
+
 static void *stratum_thread(void *userdata)
 {
 	struct thr_info *mythr = (struct thr_info *)userdata;
@@ -3818,6 +3952,10 @@ wait_stratum_url:
 			pthread_mutex_unlock(&g_work_lock);
 			restart_threads();
 
+
+
+			if (opt_algo != ALGO_MTP) {
+
 			if (!stratum_connect(&stratum, pool->url) ||
 			    !stratum_subscribe(&stratum) ||
 			    !stratum_authorize(&stratum, pool->user, pool->pass))
@@ -3841,6 +3979,36 @@ wait_stratum_url:
 					applog(LOG_ERR, "...retry after %d seconds", opt_fail_pause);
 				sleep(opt_fail_pause);
 			}
+
+			}
+			else {
+				if (!stratum_connect(&stratum, pool->url) ||
+					!stratum_subscribe_bos(&stratum) ||
+					!stratum_authorize_bos(&stratum, pool->user, pool->pass))
+				{
+					stratum_disconnect(&stratum);
+					if (opt_retries >= 0 && ++failures > opt_retries) {
+						if (num_pools > 1 && opt_pool_failover) {
+							applog(LOG_WARNING, "Stratum connect timeout, failover...");
+							pool_switch_next(-1);
+						}
+						else {
+							applog(LOG_ERR, "...terminating workio thread");
+							//tq_push(thr_info[work_thr_id].q, NULL);
+							workio_abort();
+							proper_exit(EXIT_CODE_POOL_TIMEOUT);
+							goto out;
+						}
+					}
+					if (switchn != pool_switch_count)
+						goto pool_switched;
+					if (!opt_benchmark)
+						applog(LOG_ERR, "...retry after %d seconds", opt_fail_pause);
+					sleep(opt_fail_pause);
+				}
+			}
+
+
 		}
 
 		if (switchn != pool_switch_count) goto pool_switched;
@@ -3883,7 +4051,25 @@ wait_stratum_url:
 			if (opt_debug)
 				applog(LOG_WARNING, "Stratum connection timed out");
 			s = NULL;
-		} else
+		} else {
+			
+			if (opt_algo == ALGO_MTP)
+			{
+
+				json_t *s2;
+				s2 = stratum_recv_line_c2(&stratum);
+				if (json_object_size(s2) == 0) {
+					stratum_disconnect(&stratum);
+					applog(LOG_ERR, "Stratum connection interrupted");
+					continue;
+				}
+				if (!stratum_handle_method_bos_json(&stratum, s2))
+					stratum_handle_response_json(s2);
+				json_decref(s2);
+
+
+			} else {
+		
 			s = stratum_recv_line(&stratum);
 
 		// double check we are on the right pool
@@ -3906,6 +4092,8 @@ wait_stratum_url:
 		}
 
 		free(s);
+		}
+		}
 	}
 
 out:
@@ -5005,7 +5193,7 @@ int main(int argc, char *argv[])
 			return EXIT_CODE_SW_INIT_ERROR;
 		}
 	}
-
+//sleep(10);
 	/* start mining threads */
 	for (i = 0; i < opt_n_threads; i++) {
 		thr = &thr_info[i];
