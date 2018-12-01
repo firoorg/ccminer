@@ -68,7 +68,7 @@ int jsonp_strtod(strbuffer_t *strbuffer, double *out)
 {
     double value;
     char *end;
-
+#define _HUGE_ENUF  1e+300
 #if JSON_HAVE_LOCALECONV
     to_locale(strbuffer);
 #endif
@@ -77,7 +77,9 @@ int jsonp_strtod(strbuffer_t *strbuffer, double *out)
     value = strtod(strbuffer->value, &end);
     assert(end == strbuffer->value + strbuffer->length);
 
-    if((value == _HUGE_ENUF || value == -_HUGE_ENUF) && errno == ERANGE) {
+    if((value == _HUGE_ENUF || value == -_HUGE_ENUF) && errno == ERANGE) 
+//   if((value == HUGE_VAL || value == -HUGE_VAL) && errno == ERANGE)
+   {
         /* Overflow */
         return -1;
     }

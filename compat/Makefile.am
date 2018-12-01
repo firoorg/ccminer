@@ -1,6 +1,6 @@
 
 if WANT_JANSSON
-SUBDIRS	= jansson
+SUBDIRS	= bos-jansson
 else
 SUBDIRS	=
 endif

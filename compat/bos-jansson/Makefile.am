@@ -3,8 +3,10 @@ EXTRA_DIST = bosjansson.def
 include_HEADERS = bosjansson.h
 nodist_include_HEADERS = jansson_config.h
 
-lib_LTLIBRARIES = libbosjansson.la
-libbosjansson_la_SOURCES = \
+noinst_LIBRARIES = libbosjansson.a
+
+###lib_LTLIBRARIES = libbosjansson.la
+libbosjansson_a_SOURCES = \
     bos_deserializer.c \
     bos_serializer.c \
 	dump.c \
@@ -23,8 +25,9 @@ libbosjansson_la_SOURCES = \
 	utf.c \
 	utf.h \
 	value.c
-libbosjansson_la_LDFLAGS = \
-	-no-undefined \
-	-export-symbols-regex '^json_' \
-	-version-info 15:0:11 \
-	@JSON_BSYMBOLIC_LDFLAGS@
+#libbosjansson_a_LDFLAGS = \
+#	-no-undefined \
+#	-export-symbols-regex '^json_' \
+#	-version-info 15:0:11 \
+#	@JSON_BSYMBOLIC_LDFLAGS@
+

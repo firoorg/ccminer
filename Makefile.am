@@ -2,7 +2,7 @@
 DEF_INCLUDES = @CUDA_INCLUDES@
 
 if WANT_JANSSON
-JANSSON_INCLUDES= -I$(top_srcdir)/compat/jansson
+JANSSON_INCLUDES= -I$(top_srcdir)/compat/bos-jansson
 else
 JANSSON_INCLUDES=
 endif

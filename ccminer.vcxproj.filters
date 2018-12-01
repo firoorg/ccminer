@@ -100,11 +100,8 @@
     <Filter Include="Source Files\CUDA\mtp">
       <UniqueIdentifier>{2a7f411a-9f6d-47bf-b5ac-ef7836f8712c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\bos-jansson">
-      <UniqueIdentifier>{f8e231bd-44c6-44fa-9aa6-007dcdf64265}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\bos-jansson">
-      <UniqueIdentifier>{25126cfe-af77-49b9-974d-27c91c583dab}</UniqueIdentifier>
+    <Filter Include="Header Files\compat\bos-janson">
+      <UniqueIdentifier>{de1bef58-fc10-4178-a81e-5347ddd4f513}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -291,44 +288,44 @@
     <ClCompile Include="argon2ref\thread.c">
       <Filter>Source Files\argon2ref</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\bos_deserializer.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\bos_deserializer.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\bos_serializer.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\bos_serializer.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\dump.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\dump.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\error.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\error.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\hashtable.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\hashtable.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\hashtable_seed.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\hashtable_seed.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\load.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\load.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\memory.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\memory.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\pack_unpack.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\pack_unpack.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\strbuffer.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\strbuffer.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\strconv.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\strconv.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\utf.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\utf.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
-    <ClCompile Include="compat\bos-jansson\src\value.c">
-      <Filter>Source Files\bos-jansson</Filter>
+    <ClCompile Include="compat\bos-jansson\value.c">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -569,29 +566,29 @@
     <ClInclude Include="cuda_mtp\cuda_sha256_helper.cuh">
       <Filter>Source Files\CUDA\mtp</Filter>
     </ClInclude>
-    <ClInclude Include="compat\bos-jansson\src\bosjansson.h">
-      <Filter>Header Files\bos-jansson</Filter>
+    <ClInclude Include="compat\bos-jansson\bosjansson.h">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClInclude>
-    <ClInclude Include="compat\bos-jansson\src\hashtable.h">
-      <Filter>Header Files\bos-jansson</Filter>
+    <ClInclude Include="compat\bos-jansson\hashtable.h">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClInclude>
-    <ClInclude Include="compat\bos-jansson\src\jansson_config.h">
-      <Filter>Header Files\bos-jansson</Filter>
+    <ClInclude Include="compat\bos-jansson\jansson_config.h">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClInclude>
-    <ClInclude Include="compat\bos-jansson\src\jansson_private.h">
-      <Filter>Header Files\bos-jansson</Filter>
+    <ClInclude Include="compat\bos-jansson\jansson_private.h">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClInclude>
-    <ClInclude Include="compat\bos-jansson\src\jansson_private_config.h">
-      <Filter>Header Files\bos-jansson</Filter>
+    <ClInclude Include="compat\bos-jansson\jansson_private_config.h">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClInclude>
-    <ClInclude Include="compat\bos-jansson\src\lookup3.h">
-      <Filter>Header Files\bos-jansson</Filter>
+    <ClInclude Include="compat\bos-jansson\lookup3.h">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClInclude>
-    <ClInclude Include="compat\bos-jansson\src\strbuffer.h">
-      <Filter>Header Files\bos-jansson</Filter>
+    <ClInclude Include="compat\bos-jansson\strbuffer.h">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClInclude>
-    <ClInclude Include="compat\bos-jansson\src\utf.h">
-      <Filter>Header Files\bos-jansson</Filter>
+    <ClInclude Include="compat\bos-jansson\utf.h">
+      <Filter>Header Files\compat\bos-janson</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -3038,10 +3038,10 @@ printf("entering miner thread\n");
 			memcpy(&work, &g_work, sizeof(struct work));
 
 			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
-		printf("*********************  this is a new one %08x \n", nonceptr[0]);
+		
 		} else {
 			nonceptr[0]++; //??
-		printf("*********************  this isn't updated %08x \n",nonceptr[0]);
+		
 		}
 		if (opt_algo == ALGO_DECRED) {
 			// suprnova job_id check without data/target/height change...

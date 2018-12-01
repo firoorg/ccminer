@@ -180,7 +180,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>HAVE_CONFIG_H;WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;CURL_STATICLIB;USE_WRAPNVML;SCRYPT_KECCAK512;SCRYPT_CHACHA;SCRYPT_CHOOSE_COMPILETIME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.;compat;compat\curl-for-windows\curl\include;compat\bos-jansson\src;compat\getopt;compat\pthreads;compat\curl-for-windows\openssl\openssl\include;compat\curl-for-windows\zlib;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;compat;compat\curl-for-windows\curl\include;compat\bos-jansson;compat\getopt;compat\pthreads;compat\curl-for-windows\openssl\openssl\include;compat\curl-for-windows\zlib;%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir)</AdditionalIncludeDirectories>
       <MinimalRebuild>true</MinimalRebuild>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -225,19 +225,19 @@
     <ClCompile Include="argon2ref\ref.c" />
     <ClCompile Include="argon2ref\thread.c" />
     <ClCompile Include="base58.cpp" />
-    <ClCompile Include="compat\bos-jansson\src\bos_deserializer.c" />
-    <ClCompile Include="compat\bos-jansson\src\bos_serializer.c" />
-    <ClCompile Include="compat\bos-jansson\src\dump.c" />
-    <ClCompile Include="compat\bos-jansson\src\error.c" />
-    <ClCompile Include="compat\bos-jansson\src\hashtable.c" />
-    <ClCompile Include="compat\bos-jansson\src\hashtable_seed.c" />
-    <ClCompile Include="compat\bos-jansson\src\load.c" />
-    <ClCompile Include="compat\bos-jansson\src\memory.c" />
-    <ClCompile Include="compat\bos-jansson\src\pack_unpack.c" />
-    <ClCompile Include="compat\bos-jansson\src\strbuffer.c" />
-    <ClCompile Include="compat\bos-jansson\src\strconv.c" />
-    <ClCompile Include="compat\bos-jansson\src\utf.c" />
-    <ClCompile Include="compat\bos-jansson\src\value.c" />
+    <ClCompile Include="compat\bos-jansson\bos_deserializer.c" />
+    <ClCompile Include="compat\bos-jansson\bos_serializer.c" />
+    <ClCompile Include="compat\bos-jansson\dump.c" />
+    <ClCompile Include="compat\bos-jansson\error.c" />
+    <ClCompile Include="compat\bos-jansson\hashtable.c" />
+    <ClCompile Include="compat\bos-jansson\hashtable_seed.c" />
+    <ClCompile Include="compat\bos-jansson\load.c" />
+    <ClCompile Include="compat\bos-jansson\memory.c" />
+    <ClCompile Include="compat\bos-jansson\pack_unpack.c" />
+    <ClCompile Include="compat\bos-jansson\strbuffer.c" />
+    <ClCompile Include="compat\bos-jansson\strconv.c" />
+    <ClCompile Include="compat\bos-jansson\utf.c" />
+    <ClCompile Include="compat\bos-jansson\value.c" />
     <ClCompile Include="compat\getopt\getopt_long.c" />
     <ClCompile Include="compat\gettimeofday.c" />
     <ClInclude Include="argon2ref\argon2.h" />
@@ -248,14 +248,14 @@
     <ClInclude Include="argon2ref\core.h" />
     <ClInclude Include="argon2ref\encoding.h" />
     <ClInclude Include="argon2ref\thread.h" />
-    <ClInclude Include="compat\bos-jansson\src\bosjansson.h" />
-    <ClInclude Include="compat\bos-jansson\src\hashtable.h" />
-    <ClInclude Include="compat\bos-jansson\src\jansson_config.h" />
-    <ClInclude Include="compat\bos-jansson\src\jansson_private.h" />
-    <ClInclude Include="compat\bos-jansson\src\jansson_private_config.h" />
-    <ClInclude Include="compat\bos-jansson\src\lookup3.h" />
-    <ClInclude Include="compat\bos-jansson\src\strbuffer.h" />
-    <ClInclude Include="compat\bos-jansson\src\utf.h" />
+    <ClInclude Include="compat\bos-jansson\bosjansson.h" />
+    <ClInclude Include="compat\bos-jansson\hashtable.h" />
+    <ClInclude Include="compat\bos-jansson\jansson_config.h" />
+    <ClInclude Include="compat\bos-jansson\jansson_private.h" />
+    <ClInclude Include="compat\bos-jansson\jansson_private_config.h" />
+    <ClInclude Include="compat\bos-jansson\lookup3.h" />
+    <ClInclude Include="compat\bos-jansson\strbuffer.h" />
+    <ClInclude Include="compat\bos-jansson\utf.h" />
     <ClInclude Include="compat\pthreads\pthread.h" />
     <ClCompile Include="compat\winansi.c" />
     <ClCompile Include="ccminer.cpp">

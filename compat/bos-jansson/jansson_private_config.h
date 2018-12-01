@@ -1,4 +1,5 @@
 /* #undef HAVE_ENDIAN_H */
+#define HAVE_CONFIG_H 1
 #define HAVE_FCNTL_H 1
 /* #undef HAVE_SCHED_H */
 /* #undef HAVE_UNISTD_H */
@@ -42,7 +43,7 @@
 #endif
 
 /* #undef HAVE_SSIZE_T */
-
+#define HAVE_SSIZE_T 0
 #ifndef HAVE_SSIZE_T
 #  define ssize_t int
 #endif

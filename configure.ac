@@ -83,9 +83,9 @@ AM_CONDITIONAL([ARCH_x86_64], [test x$have_x86_64 = xtrue])
 
 if test x$request_jansson = xtrue
 then
-	JANSSON_LIBS="compat/jansson/libjansson.a"
+	JANSSON_LIBS="compat/jansson/libbosjansson.a"
 else
-	JANSSON_LIBS=-ljansson
+	JANSSON_LIBS=-lbosjansson
 fi
 
 LIBCURL_CHECK_CONFIG(, 7.15.2, ,
@@ -99,7 +99,7 @@ AC_SUBST(WS2_LIBS)
 AC_CONFIG_FILES([
 	Makefile
 	compat/Makefile
-	compat/jansson/Makefile
+	compat/bos-jansson/Makefile
 	])
 
 dnl find out what version we are running

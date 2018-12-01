@@ -3157,9 +3157,9 @@ printf("stratum_handle_method_bos_json\n");
 	}
 
 out:
-	printf("end stratum_handle_method_bos_json\n");
-	if (val)
-		json_decref(val);
+//	printf("end stratum_handle_method_bos_json\n");
+//	if (val)
+//		json_decref(val);
 
 	return ret;
 }
