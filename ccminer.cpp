@@ -1105,9 +1105,7 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 			le32enc(&nonce, work->data[19]);
 			char *sobid = (char*)malloc(9);
 			sprintf(sobid,"%s",work->job_id+8);
-printf("sending the job_id %s\n", sobid);
-printf("ntime %08x %08x\n",ntime, work->data[17]);
-printf("nonce %08x\n", work->data[19]);
+
 		json_t *MyObject = json_object();
 		json_t *json_arr = json_array();
 		json_object_set_new(MyObject, "id", json_integer(4));
@@ -1212,7 +1210,7 @@ printf("nonce %08x\n", work->data[19]);
 		char *req;
 	
 		for (int i = 0; i < ARRAY_SIZE(work->data); i++)
-			be32enc(work->data + i, work->data[i]);
+			le32enc(work->data + i, work->data[i]);
 		dbin2hex(data_str, (unsigned char *)work->data, 84);
 		
 		for (int i=0;i<84;i++)
@@ -1580,7 +1578,7 @@ out:
 
 static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 {
-printf("coming in getblocktemplate\n");
+
 //restart_threads();
 	int i, n;
 	uint32_t version, curtime, bits;
@@ -1932,18 +1930,18 @@ printf("coming in getblocktemplate\n");
 	}
 
 	// assemble block header 
-	work->data[0] = swab32(version);
+	work->data[0] = (version);
 	for (i = 0; i < 8; i++)
-		work->data[8 - i] = le32dec(prevhash + i);
+		work->data[8 - i] = be32dec(prevhash + i);
 	for (i = 0; i < 8; i++)
-		work->data[9 + i] = be32dec((uint32_t *)merkle_tree[0] + i);
-	work->data[17] = swab32(curtime);
-	work->data[18] = le32dec(&bits);
+		work->data[9 + i] = le32dec((uint32_t *)merkle_tree[0] + i);
+	work->data[17] = (curtime);
+	work->data[18] = be32dec(&bits);
 	memset(work->data + 19, 0x00, 52);
 /************************************************************************/
 //mtp stuff
 
-	work->data[20] = swab32(mtpVersion);
+	work->data[20] = (mtpVersion);
 /*************************************************************************/
 	
 //	work->data[20] = 0x80000000;

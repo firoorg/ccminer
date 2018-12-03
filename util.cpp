@@ -2210,7 +2210,7 @@ out:
 bool stratum_authorize_bos(struct stratum_ctx *sctx, const char *user, const char *pass)
 {
 	json_t *val = NULL, *res_val, *err_val;
-	char *s, *sret;
+	char  *sret;
 	json_t *obj;
 	json_error_t err;
 	bool ret = false;
@@ -2259,7 +2259,6 @@ bool stratum_authorize_bos(struct stratum_ctx *sctx, const char *user, const cha
 	if (!opt_extranonce)
 		goto out;
 out:
-	free(s);
 	if (val)
 		json_decref(val);
 	return ret;
