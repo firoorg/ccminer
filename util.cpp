@@ -1104,7 +1104,7 @@ static bool send_line_bos(curl_socket_t sock, bos_t *s2)
 	len = s2->size;
  
 	while (len > 0) {
-		struct timeval timeout = { 0, 0 };
+		struct timeval timeout = { 1, 0 };
 		int n;
 		fd_set wd;
 
