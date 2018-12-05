@@ -53,7 +53,7 @@ printf("the job_id from mtp %s\n",work->job_id+8);
 		if (device_sm[device_map[thr_id]] == 500) intensity = 15;
 		intensity = 1;
 		throughput = cuda_default_throughput(thr_id, 1U << intensity); // 18=256*256*4;
-		throughput =  1024*64;
+		throughput =  1024*64*8;
 		if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 		cudaDeviceProp props;

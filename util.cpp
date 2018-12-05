@@ -2028,7 +2028,7 @@ out:
 bool stratum_subscribe_bos(struct stratum_ctx *sctx)
 {
 	char *s, *sret = NULL;
-	char *s2;
+
 	const char *sid;
 	json_t *val = NULL, *res_val, *err_val;
 	json_error_t err;

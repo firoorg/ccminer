@@ -897,6 +897,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		if (check_dups)
 			sent = hashlog_already_submittted(work->job_id, nonce);
 		if (sent > 0) {
+		printf("sent > 0 \n");
 			sent = (uint32_t) time(NULL) - sent;
 			if (!opt_quiet) {
 				applog(LOG_WARNING, "nonce %s was already sent %u seconds ago", noncestr, sent);
@@ -3901,8 +3902,8 @@ static bool stratum_handle_response_json(json_t *val)
 	ret = true;
 
 out:
-	if (val)
-		json_decref(val);
+//	if (val)
+//		json_decref(val);
 
 	return ret;
 }
@@ -4021,6 +4022,8 @@ wait_stratum_url:
 				if (stratum_gen_work(&stratum, &g_work)) g_work_time = time(NULL);
 			
 			if (stratum.job.clean) {
+
+		printf("stratum job clean\n");
 				static uint32_t last_bloc_height;
 				if (!opt_quiet && stratum.job.height != last_bloc_height) {
 					last_bloc_height = stratum.job.height;
