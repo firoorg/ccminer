@@ -53,7 +53,7 @@ public :
      *        not of the right size, \see MERKLE_TREE_ELEMENT_SIZE_B.
      */
     MerkleTree(const Elements& elements, bool preserveOrder = false);
-
+	MerkleTree();
     /** Destructor */
     virtual ~MerkleTree();
 

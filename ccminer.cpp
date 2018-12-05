@@ -3630,7 +3630,7 @@ printf("entering miner thread\n");
 	}
 
 out:
-	free(mtp);
+//	free(mtp);
 //	free(&work);
 	if (opt_led_mode)
 		gpu_led_off(dev_id);

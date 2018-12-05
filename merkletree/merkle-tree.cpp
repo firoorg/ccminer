@@ -52,6 +52,9 @@ MerkleTree::MerkleTree(const Elements& elements, bool preserveOrder)
     getLayers();
 }
 
+MerkleTree::MerkleTree()
+{
+}
 MerkleTree::~MerkleTree()
 {
 }
