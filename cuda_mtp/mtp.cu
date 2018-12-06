@@ -175,8 +175,8 @@ TheEnd:
 	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
 	*hashes_done = pdata[19] - first_nonce;
 
-	ordered_tree.~MerkleTree();
-	TheElements.clear();
+//	ordered_tree.~MerkleTree();
+//	TheElements.clear();
 	return 0;
 }
 
