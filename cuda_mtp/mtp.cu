@@ -85,8 +85,6 @@ printf("the job_id from mtp %s\n",work->job_id+8);
 //	argon2_instance_t instance;
 //	argon2_ctx_from_mtp(&context, &instance);
 
-
-printf("Pdata1 %08x work->data[1] %08x\n", JobId,work->data[17]);
 if (JobId!= work->data[17]){
 
 if (JobId!=0)

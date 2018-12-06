@@ -725,7 +725,7 @@ struct mtp {
 	unsigned char MerkleRoot[16];
 	unsigned char mtpHashValue[32];
 	uint64_t nBlockMTP[MTP_L*2][128];
-	unsigned char nProofMTP[MTP_L *3* 353]; // largest estimate
+	unsigned char nProofMTP[MTP_L *3* 353]; 
 };
 
 
