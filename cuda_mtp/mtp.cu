@@ -22,13 +22,18 @@ extern void mtp_fill(const uint64_t *Block, uint32_t offset, uint32_t datachunk)
 
 static bool init[MAX_GPUS] = { 0 };
 static __thread uint32_t throughput = 0;
-
+static uint32_t JobId = 0;
+static MerkleTree::Elements TheElements;
+static MerkleTree ordered_tree;
+static unsigned char TheMerkleRoot[16];
+static argon2_context context;
+argon2_instance_t instance;
 extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp)
 {
 //	if (work_restart[thr_id].restart) return 0;
-	unsigned char TheMerkleRoot[16];
+//	unsigned char TheMerkleRoot[16];
 	unsigned char mtpHashValue[32];
-	MerkleTree::Elements TheElements; // = new MerkleTree;
+//	MerkleTree::Elements TheElements; // = new MerkleTree;
 printf("the job_id from mtp %s\n",work->job_id+8);
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
@@ -76,19 +81,28 @@ printf("the job_id from mtp %s\n",work->job_id+8);
 	for (int k = 0; k < 20; k++) 
 		endiandata[k] = pdata[k];
 	
-	argon2_context context = init_argon2d_param((const char*)endiandata);
-	argon2_instance_t instance;
+//	argon2_context context = init_argon2d_param((const char*)endiandata);
+//	argon2_instance_t instance;
+//	argon2_ctx_from_mtp(&context, &instance);
+
+
+printf("Pdata1 %08x work->data[1] %08x\n", JobId,work->data[17]);
+if (JobId!= work->data[17]){
+
+if (JobId!=0)
+	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
+
+	context = init_argon2d_param((const char*)endiandata);
 	argon2_ctx_from_mtp(&context, &instance);
 
 
-
-
 	TheElements = mtp_init(&instance);
-	MerkleTree ordered_tree;
+//	MerkleTree ordered_tree;
 	ordered_tree = MerkleTree(TheElements, true);
+	JobId = work->data[17];
+
 	MerkleTree::Buffer root = ordered_tree.getRoot();
 	std::copy(root.begin(), root.end(), TheMerkleRoot);
-
 
 	mtp_setBlockTarget(endiandata,ptarget,&TheMerkleRoot);
 const int datachunk = 512;
@@ -106,6 +120,8 @@ uint64_t *Truc =(uint64_t *) malloc(128* datachunk*sizeof(uint64_t));
 	free(Truc);
 }
 printf("memory filled \n");
+}
+
 	if (work_restart[thr_id].restart) goto TheEnd;
 		pdata[19] = first_nonce;
 do  {
@@ -152,7 +168,7 @@ do  {
 
 
 				printf("found a solution, nonce %08x\n",pdata[19]);
-				free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
+//				free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
 				
 				return res;
 
@@ -172,7 +188,7 @@ do  {
 	}   while (!work_restart[thr_id].restart && pdata[19]<0xffffffff);
 
 TheEnd:
-	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
+//	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
 	*hashes_done = pdata[19] - first_nonce;
 
 //	ordered_tree.~MerkleTree();
