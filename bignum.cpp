@@ -5,7 +5,13 @@
 #include <stdio.h>
 
 #include "uint256.h"
+
+#include <openssl/opensslv.h>
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#include "compat/bignum_ssl10.hpp"
+#else
 #include "bignum.hpp"
+#endif
 
 #include "miner.h" // hex2bin
 
@@ -74,6 +80,7 @@ extern "C" void bn_store_hash_target_ratio(uint32_t* hash, uint32_t* target, str
 {
 	// only if the option is enabled (to reduce cpu usage)
 	if (!opt_showdiff) return;
+	if (nonce < 0 || nonce >= MAX_NONCES) return;
 
 	work->shareratio[nonce] = bn_hash_target_ratio(hash, target);
 	work->sharediff[nonce] = work->targetdiff * work->shareratio[nonce];
@@ -88,6 +95,6 @@ extern "C" void bn_set_target_ratio(struct work* work, uint32_t* hash, int nonce
 // compat (only store single nonce share diff per work)
 extern "C" void work_set_target_ratio(struct work* work, uint32_t* hash)
 {
-	bn_store_hash_target_ratio(hash, work->target, work, 0);
+	bn_store_hash_target_ratio(hash, work->target, work, work->submit_nonce_id);
 }
 

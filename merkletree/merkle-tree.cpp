@@ -17,8 +17,9 @@ std::ostream& operator<<(std::ostream& os, const MerkleTree::Buffer& buffer)
 }
 
 MerkleTree::MerkleTree(const Elements& elements, bool preserveOrder)
-    : preserveOrder_(preserveOrder)
+    : preserveOrder_(preserveOrder), elements_(elements)
 {
+/*
     if (elements.empty()) {
         throw std::runtime_error("Empty elements list");
     }
@@ -48,7 +49,7 @@ MerkleTree::MerkleTree(const Elements& elements, bool preserveOrder)
     if (!preserveOrder_) {
         std::sort(elements_.begin(), elements_.end()); // sort elements
     }
-
+*/
     getLayers();
 }
 

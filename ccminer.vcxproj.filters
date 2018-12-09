@@ -590,6 +590,9 @@
     <ClInclude Include="compat\bos-jansson\utf.h">
       <Filter>Header Files\compat\bos-janson</Filter>
     </ClInclude>
+    <ClInclude Include="compat\bignum_ssl10.hpp">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda.cpp">

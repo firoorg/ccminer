@@ -52,7 +52,7 @@ public :
      * \throw `std::runtime_error` if `elements` contains an element which is
      *        not of the right size, \see MERKLE_TREE_ELEMENT_SIZE_B.
      */
-    MerkleTree(const Elements& elements, bool preserveOrder = false);
+    MerkleTree(const Elements& elements, bool preserveOrder = true);
 	MerkleTree();
     /** Destructor */
     virtual ~MerkleTree();
