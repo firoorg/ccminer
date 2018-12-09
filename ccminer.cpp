@@ -81,9 +81,9 @@ struct workio_cmd {
 	int pooln;
 };
 
-bool opt_debug = true;
-bool opt_debug_diff = true;
-bool opt_debug_threads = true;
+bool opt_debug = false;
+bool opt_debug_diff = false;
+bool opt_debug_threads = false;
 bool opt_protocol = false;
 bool opt_benchmark = false;
 bool opt_showdiff = true;
@@ -1386,7 +1386,7 @@ static bool gbt_work_decode(const json_t *val, struct work *work)
 	// build coinbase transaction 
 	tmp = json_object_get(val, "coinbasetxn");
 	if (tmp) {
-printf("printf coinbase txn\n");
+//printf("printf coinbase txn\n");
 		const char *cbtx_hex = json_string_value(json_object_get(tmp, "data"));
 		cbtx_size = cbtx_hex ? (int)strlen(cbtx_hex) / 2 : 0;
 		cbtx = (uchar*)malloc(cbtx_size + 100);
@@ -2587,8 +2587,8 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	work->xnonce2_len = sctx->xnonce2_size;
 	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
 
-	printf("thefull job id %s\n",work->job_id);
-	printf("reduced job id %s\n", work->job_id+8);
+//	printf("thefull job id %s\n",work->job_id);
+//	printf("reduced job id %s\n", work->job_id+8);
 
 	// also store the block number
 	work->height = sctx->job.height;
@@ -2682,10 +2682,10 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[18] = le32dec(sctx->job.nbits);
 		work->data[20] = 0x00100000;
 
-		for (int k = 0; k < 20; k++) {
-			printf(" %08x", work->data[k]);
-		}
-		printf("\n");
+//		for (int k = 0; k < 20; k++) {
+//			printf(" %08x", work->data[k]);
+//		}
+//		printf("\n");
 	} else {
 		for (i = 0; i < 8; i++)
 			work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
@@ -2835,7 +2835,7 @@ static bool wanna_mine(int thr_id)
 
 static void *miner_thread(void *userdata)
 {
-printf("entering miner thread\n");
+//printf("entering miner thread\n");
 	struct thr_info *mythr = (struct thr_info *)userdata;
 	struct mtp * mtp = (struct mtp*)malloc(sizeof(struct mtp));
 	int switchn = pool_switch_count;
@@ -3895,7 +3895,7 @@ static bool stratum_handle_response_json(json_t *val)
 
 		valid = json_is_true(res_val);
 
-		printf("err_val %s",json_dumps(err_val,0));
+//		printf("err_val %s",json_dumps(err_val,0));
 		share_result(valid, stratum.pooln, stratum.sharediff, err_val ? json_string_value(json_array_get(err_val, 1)) : NULL);
 
 
@@ -4023,7 +4023,7 @@ wait_stratum_url:
 			
 			if (stratum.job.clean) {
 
-		printf("stratum job clean\n");
+//		printf("stratum job clean\n");
 				static uint32_t last_bloc_height;
 				if (!opt_quiet && stratum.job.height != last_bloc_height) {
 					last_bloc_height = stratum.job.height;

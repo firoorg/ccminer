@@ -34,7 +34,7 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 //	unsigned char TheMerkleRoot[16];
 	unsigned char mtpHashValue[32];
 //	MerkleTree::Elements TheElements; // = new MerkleTree;
-printf("the job_id from mtp %s\n",work->job_id+8);
+//printf("the job_id from mtp %s\n",work->job_id+8);
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
@@ -165,7 +165,7 @@ do  {
 				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)* MTP_L * 3 * 353);
 
 
-				printf("found a solution, nonce %08x\n",pdata[19]);
+//				printf("found a solution, nonce %08x\n",pdata[19]);
 //				free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
 				
 				return res;

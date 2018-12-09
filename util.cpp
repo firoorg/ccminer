@@ -1353,7 +1353,7 @@ json_t* recode_message(json_t *MyObject2)
 
 json_t *stratum_recv_line_bos(struct stratum_ctx *sctx)
 {
-	printf("stratum_recv_line_bos\n");
+//	printf("stratum_recv_line_bos\n");
 	json_t *MyObject2 = json_object();
 	json_t *MyObject = json_object();
 	ssize_t len, buflen;
@@ -1461,7 +1461,7 @@ char *stratum_recv_line_boschar(struct stratum_ctx *sctx)
 	time_t rstart = time(NULL);
 
 
-printf("stratum_recv_line_boschar\n");
+//printf("stratum_recv_line_boschar\n");
 	do {
 		char s[RBUFSIZE];
 		ssize_t n = 0;
@@ -1563,7 +1563,7 @@ out:
 
 bool stratum_recv_line_compact(struct stratum_ctx *sctx)
 {
-	printf("stratum_recv_line_compact\n");
+//	printf("stratum_recv_line_compact\n");
 	json_t *MyObject2 = json_object();
 	json_t *MyObject = json_object();
 	ssize_t len, buflen;
@@ -1621,7 +1621,7 @@ bool stratum_recv_line_compact(struct stratum_ctx *sctx)
 	}
 
 out:
-	printf("end stratum_recv_line_compact\n");
+//	printf("end stratum_recv_line_compact\n");
 	//	if (sret && opt_protocol)
 	//		applog(LOG_DEBUG, "< %s", sret);
 	return isok;//json_dumps(MyObject, 0);
@@ -1629,7 +1629,7 @@ out:
 
 json_t* stratum_recv_line_c2(struct stratum_ctx *sctx)
 {
-	printf("stratum_recv_line_c2\n");
+//	printf("stratum_recv_line_c2\n");
 	json_t *MyObject = json_object();
 	ssize_t len, buflen;
 	ssize_t mess;
@@ -2249,7 +2249,7 @@ bool stratum_authorize_bos(struct stratum_ctx *sctx, const char *user, const cha
 		goto out;
 	}
 	while (1) {
-		printf("coming here\n");
+//		printf("coming here\n");
 		if (!stratum_recv_line_compact(sctx))
 			break;
 	}
@@ -2435,7 +2435,7 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	job_id = (const uchar*)json_bytes_value(json_array_get(params, p++));
 
 //	memcpy(sctx->job.ucjob_id, job_id, job_idsize);
-	printf("before merkle count job_idsize %d %08x\n",job_idsize,((uint32_t*)job_id)[0]);
+//	printf("before merkle count job_idsize %d %08x\n",job_idsize,((uint32_t*)job_id)[0]);
 	prevhash = (const uchar*)json_bytes_value(json_array_get(params, p++));
 
 	coinb1 = (const uchar*)json_bytes_value(json_array_get(params, p));
@@ -2493,7 +2493,7 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	memcpy(sctx->job.xnonce2 + sctx->xnonce2_size, coinb2, coinb2_size);
 
 
-printf("before job_id\n");
+//printf("before job_id\n");
 	free(sctx->job.job_id);
 	//	sctx->job.job_id = job_id;
 	sctx->job.job_id = (char*)malloc(2 * job_idsize + 1);
@@ -3088,7 +3088,7 @@ out:
 bool stratum_handle_method_bos_json(struct stratum_ctx *sctx, json_t *val)
 {
 
-printf("stratum_handle_method_bos_json\n");
+//printf("stratum_handle_method_bos_json\n");
 	json_t *id, *params;
 	json_error_t err;
 	const char *method;
@@ -3103,9 +3103,9 @@ printf("stratum_handle_method_bos_json\n");
 	id = json_object_get(val, "id");
 
 	if (!strcasecmp(method, "mining.notify")) {
-		printf("mining.notify\n");
+//		printf("mining.notify\n");
 		ret = stratum_notify_bos(sctx, params);
-		printf("end mining.notify\n");
+//		printf("end mining.notify\n");
 		goto out;
 	}
 	if (!strcasecmp(method, "mining.set_target")) {
