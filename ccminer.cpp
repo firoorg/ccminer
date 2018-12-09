@@ -1785,7 +1785,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		char script_payee[1024];
 
 
-		/*  // for mainnet
+		  // for mainnet
 		base58_decode("aCAgTPgtYcA4EysU4UKC86EQd5cTtHtCcr", script_payee);
 		job_pack_tx(coinb1, 50000000, script_payee);
 
@@ -1800,7 +1800,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 
 		base58_decode("a1kCCGddf5pMXSipLVD9hBG2MGGVNaJ15U", script_payee);
 		job_pack_tx(coinb5, 50000000, script_payee);
-		*/
+		/*
 		// for testnet with znode payment
 		base58_decode("TDk19wPKYq91i18qmY6U9FeTdTxwPeSveo", script_payee);
 		job_pack_tx(coinb1, 50000000, script_payee);
@@ -1816,7 +1816,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 
 		base58_decode("TCsTzQZKVn4fao8jDmB9zQBk9YQNEZ3XfS", script_payee);
 		job_pack_tx(coinb5, 50000000, script_payee);
-		
+		*/
 
 		
 		if (mpay && json_integer_value(mnamount)!=0) {
