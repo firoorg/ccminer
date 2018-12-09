@@ -17,6 +17,7 @@ bin_PROGRAMS = ccminer
 
 ccminer_SOURCES	= elist.h miner.h compat.h \
 			  base58.cpp \	
+			  compat/bignum_ssl10.hpp \
 			  compat/inttypes.h compat/stdbool.h compat/unistd.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
 			  crc32.c hefty1.c \
