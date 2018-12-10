@@ -166,6 +166,7 @@ int cuda_finddevice(char *name)
 // since 1.7
 uint32_t cuda_default_throughput(int thr_id, uint32_t defcount)
 {
+printf("defcount %d \n",defcount);
 	//int dev_id = device_map[thr_id % MAX_GPUS];
 	uint32_t throughput = gpus_intensity[thr_id] ? gpus_intensity[thr_id] : defcount;
 	if (gpu_threads > 1 && throughput == defcount) throughput /= (gpu_threads-1);
