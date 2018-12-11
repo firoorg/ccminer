@@ -125,6 +125,23 @@ void getblockindex(uint32_t ij, argon2_instance_t *instance, uint32_t *out_ij_pr
 }
 
 
+void StoreBlock(void *output, const block *src)
+{
+	for (unsigned i = 0; i < ARGON2_QWORDS_IN_BLOCK; ++i) {
+		store64(static_cast<uint8_t*>(output)
+			+ (i * sizeof(src->v[i])), src->v[i]);
+	}
+}
+
+
+void compute_blake2b(const block& input,
+	uint8_t digest[MERKLE_TREE_ELEMENT_SIZE_B])
+{
+	ablake2b_state state;
+	ablake2b_init(&state, MERKLE_TREE_ELEMENT_SIZE_B);
+	ablake2b4rounds_update(&state, input.v, ARGON2_BLOCK_SIZE);
+	ablake2b4rounds_final(&state, digest, MERKLE_TREE_ELEMENT_SIZE_B);
+}
 
 
 unsigned int trailing_zeros(char str[64]) {
@@ -634,6 +651,31 @@ MerkleTree::Elements mtp_init( argon2_instance_t *instance) {
 	
 
 }
+
+MerkleTree::Elements   mtp_init2(argon2_instance_t *instance) {
+
+	MerkleTree::Elements  elements;
+	printf("Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory \n");
+	//	MerkleTree::Elements elements;
+	if (instance != NULL) {
+		printf("Step 2 : Compute the root Φ of the Merkle hash tree \n");
+		uint8_t digest[MERKLE_TREE_ELEMENT_SIZE_B];
+		for (int i = 0; i < instance->memory_blocks / 2; ++i) {
+			memset(digest, 0, MERKLE_TREE_ELEMENT_SIZE_B);
+			compute_blake2b(instance->memory[2 * i], digest);
+			elements.emplace_back(digest, digest + sizeof(digest));
+			memset(digest, 0, MERKLE_TREE_ELEMENT_SIZE_B);
+			compute_blake2b(instance->memory[2 * i + 1], digest);
+			elements.emplace_back(digest, digest + sizeof(digest));
+			//			elements->push_back(digest, digest + sizeof(digest));
+		}
+
+		printf("end Step 2 : Compute the root Φ of the Merkle hash tree \n");
+		return elements;
+	}
+
+}
+
 //
 void mtp_hash(char* output, const char* input, unsigned int d,uint32_t TheNonce) {
     argon2_context context = init_argon2d_param(input);

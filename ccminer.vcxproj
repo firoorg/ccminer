@@ -108,13 +108,14 @@
     </Link>
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
-      <GenerateLineInfo>true</GenerateLineInfo>
+      <GenerateLineInfo>false</GenerateLineInfo>
       <MaxRegCount>80</MaxRegCount>
-      <PtxAsOptionV>true</PtxAsOptionV>
+      <PtxAsOptionV>false</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_52,sm_52</CodeGeneration>
+      <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <Include>$(NVTOOLSEXT_PATH)\include;..\..\..\Common\C99</Include>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <GPUDebugInfo>false</GPUDebugInfo>
     </CudaCompile>
     <CudaLink>
       <PerformDeviceLink>false</PerformDeviceLink>
@@ -203,14 +204,14 @@
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
       <MaxRegCount>80</MaxRegCount>
-      <PtxAsOptionV>true</PtxAsOptionV>
+      <PtxAsOptionV>false</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_52,sm_52</CodeGeneration>
+      <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <Include>$(NVTOOLSEXT_PATH)\include;..\..\..\Common\C99</Include>
       <Optimization>O3</Optimization>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <InterleaveSourceInPTX>true</InterleaveSourceInPTX>
-      <GenerateLineInfo>true</GenerateLineInfo>
+      <InterleaveSourceInPTX>false</InterleaveSourceInPTX>
+      <GenerateLineInfo>false</GenerateLineInfo>
     </CudaCompile>
     <CudaLink>
       <Optimization>O3</Optimization>

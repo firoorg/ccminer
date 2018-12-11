@@ -106,7 +106,7 @@ if (JobId[thr_id]!=0)
 	argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
 
 
-	MerkleTree::Elements TheElements = mtp_init(&instance[thr_id]);
+	MerkleTree::Elements TheElements = mtp_init2(&instance[thr_id]);
 
 	ordered_tree[thr_id] = MerkleTree(TheElements, true);
 	JobId[thr_id] = work->data[17];
