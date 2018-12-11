@@ -2841,6 +2841,8 @@ static void *miner_thread(void *userdata)
 	int switchn = pool_switch_count;
 	int thr_id = mythr->id;
 	int dev_id = device_map[thr_id % MAX_GPUS];
+
+
 	struct work work;
 	uint64_t loopcnt = 0;
 	uint32_t max_nonce;

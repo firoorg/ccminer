@@ -14,7 +14,7 @@ static uint32_t *d_MinNonces[16];
 __constant__ uint32_t pTarget[8];
 __constant__ uint32_t pData[20]; // truncated data
 __constant__ uint4 Elements[1];
-__device__ uint4 * HBlock;
+uint4 * HBlock[2];
 
 #define ARGON2_SYNC_POINTS 4
 #define argon_outlen 32
@@ -300,8 +300,8 @@ __device__ static int blake2b_compress2b(uint2 *hash, const uint2 *hzcash, const
 }
 
 __global__
-void mtp_yloop(uint32_t threads, uint32_t startNounce, const uint4  * __restrict__ DBlock,
- const uint4 * __restrict__ MerkleRootElements, uint32_t * __restrict__ SmallestNonce)
+void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const uint4  * __restrict__ DBlock,
+  uint32_t * __restrict__ SmallestNonce)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	uint32_t NonceNumber = 1;  // old
@@ -398,20 +398,20 @@ void mtp_yloop(uint32_t threads, uint32_t startNounce, const uint4  * __restrict
 __host__
 void mtp_cpu_init(int thr_id, uint32_t threads)
 {
-
+cudaSetDevice(device_map[thr_id]);
 	// just assign the device pointer allocated in main loop
 
-printf("number of threads %d \n",threads);
-	cudaMalloc((void**)&HBlock, 256 * argon_memcost * sizeof(uint32_t) );
+
+	cudaMalloc((void**)&HBlock[thr_id], 256 * argon_memcost * sizeof(uint32_t) );
 	cudaMalloc(&d_MinNonces[thr_id], sizeof(uint32_t));
 	cudaMallocHost(&h_MinNonces[thr_id],  sizeof(uint32_t));
 }
 
 
 __host__
-void mtp_setBlockTarget(const void* pDataIn,const void *pTargetIn, const void * zElement)
+void mtp_setBlockTarget(int thr_id,const void* pDataIn,const void *pTargetIn, const void * zElement)
 {
-
+cudaSetDevice(device_map[thr_id]);
 
 	cudaMemcpyToSymbol(pData, pDataIn, 80, 0, cudaMemcpyHostToDevice); 
 	cudaMemcpyToSymbol(pTarget, pTargetIn, 32, 0, cudaMemcpyHostToDevice);	
@@ -420,10 +420,10 @@ void mtp_setBlockTarget(const void* pDataIn,const void *pTargetIn, const void * 
 }
 
 __host__
-void mtp_fill(const uint64_t *Block,uint32_t offset, uint32_t datachunk)
+void mtp_fill(uint32_t dev_id ,const uint64_t *Block,uint32_t offset, uint32_t datachunk)
 {
-
-	 uint4 *Blockptr   = &HBlock[offset*64* datachunk];
+cudaSetDevice(device_map[dev_id]);
+	 uint4 *Blockptr   = &HBlock[dev_id][offset*64* datachunk];
 	 cudaError_t err = cudaMemcpyAsync(Blockptr, Block, datachunk * 256 * sizeof(uint32_t), cudaMemcpyHostToDevice);
 	
 	if (err != cudaSuccess)
@@ -438,7 +438,7 @@ void mtp_fill(const uint64_t *Block,uint32_t offset, uint32_t datachunk)
 __host__
 uint32_t mtp_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce)
 {
-
+cudaSetDevice(device_map[thr_id]);
 	uint32_t result = UINT32_MAX;
 	cudaMemset(d_MinNonces[thr_id],0xff,sizeof(uint32_t));
 	int dev_id = device_map[thr_id % MAX_GPUS];
@@ -448,7 +448,7 @@ uint32_t mtp_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce)
 	dim3 gridyloop(threads/tpb);
 	dim3 blockyloop(tpb);
 
-	mtp_yloop << < gridyloop,blockyloop >> >(threads,startNounce,HBlock,Elements,d_MinNonces[thr_id]);
+	mtp_yloop << < gridyloop,blockyloop >> >(thr_id,threads,startNounce,HBlock[thr_id],d_MinNonces[thr_id]);
 
 
 	cudaMemcpy(h_MinNonces[thr_id], d_MinNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
