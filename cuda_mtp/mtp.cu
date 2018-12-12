@@ -148,7 +148,7 @@ pthread_mutex_unlock(&work_lock);
 	if (work_restart[thr_id].restart) goto TheEnd;
 		pdata[19] = first_nonce;
 //do  {
-		int order = 0;
+
 		uint32_t foundNonce;
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
