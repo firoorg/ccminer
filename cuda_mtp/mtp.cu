@@ -22,29 +22,30 @@ extern void mtp_fill(uint32_t d, const uint64_t *Block, uint32_t offset, uint32_
 
 static bool init[MAX_GPUS] = { 0 };
 static __thread uint32_t throughput = 0;
-static uint32_t JobId[MAX_GPUS] = {0};
-//static  MerkleTree::Elements TheElements[MAX_GPUS];
-static  MerkleTree ordered_tree[MAX_GPUS];
-static  unsigned char TheMerkleRoot[MAX_GPUS][16];
-static  argon2_context context[MAX_GPUS];
-static argon2_instance_t instance[MAX_GPUS];
-//static pthread_mutex_t work_lock;
-//static pthread_barrier_t barrier;
+static uint32_t JobId = {0};
+static  MerkleTree::Elements TheElements;
+static  MerkleTree ordered_tree;
+static  unsigned char TheMerkleRoot[16];
+static  argon2_context context;
+static argon2_instance_t instance;
+static pthread_mutex_t work_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_barrier_t barrier;
+static pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
 extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp)
 {
 //	if (work_restart[thr_id].restart) return 0;
 //	unsigned char TheMerkleRoot[16];
 	unsigned char mtpHashValue[32];
 
-//	pthread_mutex_init(&work_lock, NULL);
-//	pthread_barrier_init(&barrier, NULL, 1);
+if (JobId==0)
+	pthread_barrier_init(&barrier, NULL, 2);
 
 //	MerkleTree::Elements TheElements; // = new MerkleTree;
 //printf("the job_id from mtp %s\n",work->job_id+8);
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
-	int dev_id = device_map[thr_id];;
+
 	if (opt_benchmark)
 		ptarget[7] = 0x00ff;
 
@@ -53,7 +54,7 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 
 	if (!init[thr_id])
 	{
-
+	int dev_id = device_map[thr_id];;
 		cudaSetDevice(dev_id);
 		
 		cudaDeviceReset();
@@ -91,31 +92,34 @@ extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, u
 //	argon2_instance_t instance;
 //	argon2_ctx_from_mtp(&context, &instance);
 //printf("coming here\n");
+	if (JobId != work->data[17]) {
+pthread_barrier_wait(&barrier);
+	}
+pthread_mutex_lock(&work_lock);
 
-
-//pthread_mutex_lock(&work_lock);
-
-if (JobId[thr_id]!= work->data[17]){
+if (JobId!= work->data[17]){
 //restart_threads();
 //pthread_barrier_wait(&barrier);
-if (JobId[thr_id]!=0)
-	free_memory(&context[thr_id], (unsigned char *)instance[thr_id].memory, instance[thr_id].memory_blocks, sizeof(block));
+//pthread_rwlock_wrlock(&rwlock);
+if (JobId!=0)
+	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
 
 //printf("coming here2\n");
-	context[thr_id] = init_argon2d_param((const char*)endiandata);
-	argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
+	context = init_argon2d_param((const char*)endiandata);
+	argon2_ctx_from_mtp(&context, &instance);
 
 
-	MerkleTree::Elements TheElements = mtp_init2(&instance[thr_id]);
+/*	MerkleTree::Elements */ TheElements = mtp_init2(&instance);
 
-	ordered_tree[thr_id] = MerkleTree(TheElements, true);
-	JobId[thr_id] = work->data[17];
+	ordered_tree = MerkleTree(TheElements, true);
+	JobId = work->data[17];
 
-	MerkleTree::Buffer root = ordered_tree[thr_id].getRoot();
-	std::copy(root.begin(), root.end(), TheMerkleRoot[thr_id]);
+	MerkleTree::Buffer root = ordered_tree.getRoot();
+	std::copy(root.begin(), root.end(), TheMerkleRoot);
 
-//	mtp_setBlockTarget(0,endiandata,ptarget,&TheMerkleRoot);
-	mtp_setBlockTarget(thr_id, endiandata, ptarget, &TheMerkleRoot[thr_id]);
+//pthread_rwlock_unlock(&rwlock);
+	mtp_setBlockTarget(0,endiandata,ptarget,&TheMerkleRoot);
+	mtp_setBlockTarget(1, endiandata, ptarget, &TheMerkleRoot);
 
 printf("filling memory\n");
 const int datachunk = 512;
@@ -123,15 +127,19 @@ for (int i=0;i<((uint32_t)memcost/ datachunk) /* && !work_restart[thr_id].restar
 uint64_t *Truc =(uint64_t *) malloc(128* datachunk*sizeof(uint64_t));
 	
 	for (int j=0;j<datachunk;j++)
-		memcpy(&Truc[128*j],instance[thr_id].memory[datachunk*i+j].v,128*sizeof(uint64_t));
+		memcpy(&Truc[128*j],instance.memory[datachunk*i+j].v,128*sizeof(uint64_t));
 
-	mtp_fill(thr_id,Truc, i, datachunk);
-//	mtp_fill(1, Truc, i, datachunk);
+	mtp_fill(0,Truc, i, datachunk);
+	mtp_fill(1, Truc, i, datachunk);
 	free(Truc);
 }
 printf("memory filled \n");
+
+//pthread_rwlock_unlock(&rwlock);
+
 }
-//pthread_mutex_unlock(&work_lock);
+
+pthread_mutex_unlock(&work_lock);
 
 
 
@@ -143,9 +151,9 @@ do  {
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 //printf("first nonce %08x thr_id %08x\n", pdata[19],thr_id);
-
+//			pthread_rwlock_rdlock(&rwlock);
 		foundNonce = mtp_cpu_hash_32(thr_id, throughput, pdata[19]);
-
+//			pthread_rwlock_unlock(&rwlock);
 		uint32_t _ALIGN(64) vhash64[8];
 		if (foundNonce != UINT32_MAX)
 		{
@@ -156,8 +164,8 @@ do  {
 
 			blockS nBlockMTP[MTP_L *2];
 			unsigned char nProofMTP[MTP_L * 3 * 353 ];
-			
-			uint32_t is_sol = mtp_solver(foundNonce, &instance[thr_id], nBlockMTP,nProofMTP, TheMerkleRoot[thr_id], mtpHashValue, ordered_tree[thr_id], endiandata,TheUint256Target[0]);
+
+			uint32_t is_sol = mtp_solver(foundNonce, &instance, nBlockMTP,nProofMTP, TheMerkleRoot, mtpHashValue, ordered_tree, endiandata,TheUint256Target[0]);
 
 			if (is_sol==1 /*&& fulltest(vhash64, ptarget)*/) {
 				int res = 1;
@@ -168,7 +176,7 @@ do  {
 /// fill mtp structure
 				mtp->MTPVersion = 0x1000;
 			for (int i=0;i<16;i++) 
-				mtp->MerkleRoot[i] = TheMerkleRoot[thr_id][i];
+				mtp->MerkleRoot[i] = TheMerkleRoot[i];
 			for (int i = 0; i<32; i++)
 				mtp->mtpHashValue[i] = mtpHashValue[i];
 			
@@ -179,18 +187,23 @@ do  {
 				int len = 0;
 
 				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)* MTP_L * 3 * 353);
-
-
+				
+//				pthread_rwlock_unlock(&rwlock);
 //				printf("found a solution, nonce %08x\n",pdata[19]);
 //				free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
 //				pthread_mutex_destroy(&work_lock);
+//				pthread_mutex_destroy(&work_lock);
+//				pthread_rwlock_destroy(&rwlock);
 				return res;
 
 			} else {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
+//				pthread_rwlock_unlock(&rwlock);
 			}
 		}
+//		pthread_rwlock_unlock(&rwlock);
 		work_set_target_ratio(work, vhash64);
+		
 /*
 		if ((uint64_t)throughput + pdata[19] >= max_nonce) {
 			pdata[19] = max_nonce;
@@ -199,7 +212,7 @@ do  {
 */
 		pdata[19] += throughput;
 //		be32enc(&endiandata[19], pdata[19]);
-	}   while (!work_restart[thr_id].restart && pdata[19]<0xffffffff);
+	}   while (!work_restart[thr_id].restart && pdata[19]<0xffffffff && JobId==work->data[17]);
 
 TheEnd:
 //	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
@@ -208,6 +221,7 @@ TheEnd:
 //	ordered_tree.~MerkleTree();
 //	TheElements.clear();
 //	pthread_mutex_destroy(&work_lock);
+//	pthread_rwlock_destroy(&rwlock);
 	return 0;
 }
 
