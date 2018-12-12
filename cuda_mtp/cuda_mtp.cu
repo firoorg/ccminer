@@ -14,7 +14,7 @@ static uint32_t *d_MinNonces[16];
 __constant__ uint32_t pTarget[8];
 __constant__ uint32_t pData[20]; // truncated data
 __constant__ uint4 Elements[1];
-uint4 * HBlock[2];
+uint4 * HBlock[16];
 
 #define ARGON2_SYNC_POINTS 4
 #define argon_outlen 32
@@ -402,9 +402,9 @@ cudaSetDevice(device_map[thr_id]);
 	// just assign the device pointer allocated in main loop
 
 
-	cudaMalloc((void**)&HBlock[thr_id], 256 * argon_memcost * sizeof(uint32_t) );
-	cudaMalloc(&d_MinNonces[thr_id], sizeof(uint32_t));
-	cudaMallocHost(&h_MinNonces[thr_id],  sizeof(uint32_t));
+	cudaMalloc((void**)&HBlock[device_map[thr_id]], 256 * argon_memcost * sizeof(uint32_t) );
+	cudaMalloc(&d_MinNonces[device_map[thr_id]], sizeof(uint32_t));
+	cudaMallocHost(&h_MinNonces[device_map[thr_id]],  sizeof(uint32_t));
 }
 
 
@@ -420,10 +420,10 @@ cudaSetDevice(device_map[thr_id]);
 }
 
 __host__
-void mtp_fill(uint32_t dev_id ,const uint64_t *Block,uint32_t offset, uint32_t datachunk)
+void mtp_fill(uint32_t thr_id ,const uint64_t *Block,uint32_t offset, uint32_t datachunk)
 {
-cudaSetDevice(device_map[dev_id]);
-	 uint4 *Blockptr   = &HBlock[dev_id][offset*64* datachunk];
+cudaSetDevice(device_map[thr_id]);
+	 uint4 *Blockptr   = &HBlock[device_map[thr_id]][offset*64* datachunk];
 	 cudaError_t err = cudaMemcpyAsync(Blockptr, Block, datachunk * 256 * sizeof(uint32_t), cudaMemcpyHostToDevice);
 	
 	if (err != cudaSuccess)
@@ -440,20 +440,20 @@ uint32_t mtp_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce)
 {
 cudaSetDevice(device_map[thr_id]);
 	uint32_t result = UINT32_MAX;
-	cudaMemset(d_MinNonces[thr_id],0xff,sizeof(uint32_t));
-	int dev_id = device_map[thr_id % MAX_GPUS];
+	cudaMemset(d_MinNonces[device_map[thr_id]],0xff,sizeof(uint32_t));
+	
 
 	uint32_t tpb = 256; //TPB52;
  
 	dim3 gridyloop(threads/tpb);
 	dim3 blockyloop(tpb);
 
-	mtp_yloop << < gridyloop,blockyloop >> >(thr_id,threads,startNounce,HBlock[thr_id],d_MinNonces[thr_id]);
+	mtp_yloop << < gridyloop,blockyloop >> >(device_map[thr_id],threads,startNounce,HBlock[device_map[thr_id]],d_MinNonces[device_map[thr_id]]);
 
 
-	cudaMemcpy(h_MinNonces[thr_id], d_MinNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_MinNonces[device_map[thr_id]], d_MinNonces[device_map[thr_id]], sizeof(uint32_t), cudaMemcpyDeviceToHost);
 
-	result = *h_MinNonces[thr_id];
+	result = *h_MinNonces[device_map[thr_id]];
 	return result;
 
 }
