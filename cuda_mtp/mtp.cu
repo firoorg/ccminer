@@ -60,7 +60,7 @@ if (JobId==0)
 		cudaSetDevice(dev_id);
 		
 		cudaDeviceReset();
-//		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 //		cudaSetDeviceFlags(cudaDeviceScheduleYield);
 
 //		int intensity = (device_sm[dev_id] >= 500 && !is_windows()) ? 17 : 16;
