@@ -121,8 +121,7 @@ if (JobId!=0)
 
 //pthread_rwlock_unlock(&rwlock);
 for (int i=0;i<nthreads;i++) {
-	mtp_setBlockTarget(0,endiandata,ptarget,&TheMerkleRoot);
-	mtp_setBlockTarget(1, endiandata, ptarget, &TheMerkleRoot);
+	mtp_setBlockTarget(i,endiandata,ptarget,&TheMerkleRoot);
 }
 printf("filling memory\n");
 const int datachunk = 512;
