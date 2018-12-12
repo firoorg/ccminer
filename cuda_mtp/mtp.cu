@@ -37,7 +37,7 @@ extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t
 //	unsigned char TheMerkleRoot[16];
 	unsigned char mtpHashValue[32];
 
-	int real_maxnonce = UINT32_MAX / nthreads * (thr_id + 1);
+
 
 if (JobId==0)
 	pthread_barrier_init(&barrier, NULL, nthreads);
@@ -47,7 +47,7 @@ if (JobId==0)
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
-
+	int real_maxnonce = UINT32_MAX / nthreads * (thr_id + 1);
 	if (opt_benchmark)
 		ptarget[7] = 0x00ff;
 
