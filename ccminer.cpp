@@ -3382,7 +3382,7 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_qubit(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_MTP:
-			rc = scanhash_mtp(thr_id, &work, max_nonce, &hashes_done, mtp);
+			rc = scanhash_mtp(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, mtp);
 			break;
 		case ALGO_LYRA2:
 			rc = scanhash_lyra2(thr_id, &work, max_nonce, &hashes_done);

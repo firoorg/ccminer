@@ -31,14 +31,16 @@ static argon2_instance_t instance;
 static pthread_mutex_t work_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_barrier_t barrier;
 static pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
-extern "C" int scanhash_mtp(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp)
+extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp)
 {
 //	if (work_restart[thr_id].restart) return 0;
 //	unsigned char TheMerkleRoot[16];
 	unsigned char mtpHashValue[32];
 
+	int real_maxnonce = UINT32_MAX / nthreads * (thr_id + 1);
+
 if (JobId==0)
-	pthread_barrier_init(&barrier, NULL, 2);
+	pthread_barrier_init(&barrier, NULL, nthreads);
 
 //	MerkleTree::Elements TheElements; // = new MerkleTree;
 //printf("the job_id from mtp %s\n",work->job_id+8);
@@ -118,9 +120,10 @@ if (JobId!=0)
 	std::copy(root.begin(), root.end(), TheMerkleRoot);
 
 //pthread_rwlock_unlock(&rwlock);
+for (int i=0;i<nthreads;i++) {
 	mtp_setBlockTarget(0,endiandata,ptarget,&TheMerkleRoot);
 	mtp_setBlockTarget(1, endiandata, ptarget, &TheMerkleRoot);
-
+}
 printf("filling memory\n");
 const int datachunk = 512;
 for (int i=0;i<((uint32_t)memcost/ datachunk) /* && !work_restart[thr_id].restart*/;i++) {
@@ -128,9 +131,9 @@ uint64_t *Truc =(uint64_t *) malloc(128* datachunk*sizeof(uint64_t));
 	
 	for (int j=0;j<datachunk;j++)
 		memcpy(&Truc[128*j],instance.memory[datachunk*i+j].v,128*sizeof(uint64_t));
+for (int k=0;k<nthreads;k++)
+	mtp_fill(k,Truc, i, datachunk);
 
-	mtp_fill(0,Truc, i, datachunk);
-	mtp_fill(1, Truc, i, datachunk);
 	free(Truc);
 }
 printf("memory filled \n");
@@ -145,7 +148,7 @@ pthread_mutex_unlock(&work_lock);
 
 	if (work_restart[thr_id].restart) goto TheEnd;
 		pdata[19] = first_nonce;
-do  {
+//do  {
 		int order = 0;
 		uint32_t foundNonce;
 
@@ -212,7 +215,7 @@ do  {
 */
 		pdata[19] += throughput;
 //		be32enc(&endiandata[19], pdata[19]);
-	}   while (!work_restart[thr_id].restart && pdata[19]<0xffffffff && JobId==work->data[17]);
+//	}   while (!work_restart[thr_id].restart && pdata[19]<real_maxnonce && JobId==work->data[17]);
 
 TheEnd:
 //	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
