@@ -33,17 +33,14 @@ static pthread_barrier_t barrier;
 static pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
 extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp)
 {
-//	if (work_restart[thr_id].restart) return 0;
-//	unsigned char TheMerkleRoot[16];
-	unsigned char mtpHashValue[32];
 
+	unsigned char mtpHashValue[32];
 
 
 if (JobId==0)
 	pthread_barrier_init(&barrier, NULL, nthreads);
 
-//	MerkleTree::Elements TheElements; // = new MerkleTree;
-//printf("the job_id from mtp %s\n",work->job_id+8);
+
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
@@ -63,8 +60,6 @@ if (JobId==0)
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 //		cudaSetDeviceFlags(cudaDeviceScheduleYield);
 
-//		int intensity = (device_sm[dev_id] >= 500 && !is_windows()) ? 17 : 16;
-//		if (device_sm[device_map[thr_id]] == 500) intensity = 15;
 		int intensity = 16;
 		throughput = cuda_default_throughput(thr_id, 1U << intensity); // 18=256*256*4;
 //		throughput =  1024*64;
@@ -90,28 +85,23 @@ if (JobId==0)
 	for (int k = 0; k < 20; k++) 
 		endiandata[k] = pdata[k];
 	
-//	argon2_context context = init_argon2d_param((const char*)endiandata);
-//	argon2_instance_t instance;
-//	argon2_ctx_from_mtp(&context, &instance);
-//printf("coming here\n");
+
 	if (JobId != work->data[17]) {
 pthread_barrier_wait(&barrier);
 	}
 pthread_mutex_lock(&work_lock);
 
 if (JobId!= work->data[17]){
-//restart_threads();
-//pthread_barrier_wait(&barrier);
-//pthread_rwlock_wrlock(&rwlock);
+
 if (JobId!=0)
 	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
 
-//printf("coming here2\n");
+
 	context = init_argon2d_param((const char*)endiandata);
 	argon2_ctx_from_mtp(&context, &instance);
 
 
-/*	MerkleTree::Elements */ TheElements = mtp_init2(&instance);
+    TheElements = mtp_init2(&instance);
 
 	ordered_tree = MerkleTree(TheElements, true);
 	JobId = work->data[17];
@@ -119,7 +109,6 @@ if (JobId!=0)
 	MerkleTree::Buffer root = ordered_tree.getRoot();
 	std::copy(root.begin(), root.end(), TheMerkleRoot);
 
-//pthread_rwlock_unlock(&rwlock);
 for (int i=0;i<nthreads;i++) {
 	mtp_setBlockTarget(i,endiandata,ptarget,&TheMerkleRoot);
 }
@@ -137,7 +126,6 @@ for (int k=0;k<nthreads;k++)
 }
 printf("memory filled \n");
 
-//pthread_rwlock_unlock(&rwlock);
 
 }
 
@@ -147,15 +135,14 @@ pthread_mutex_unlock(&work_lock);
 
 	if (work_restart[thr_id].restart) goto TheEnd;
 		pdata[19] = first_nonce;
-//do  {
-
+do  {
+//		printf("work->data[17]=%08x\n", work->data[17]);
 		uint32_t foundNonce;
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
-//printf("first nonce %08x thr_id %08x\n", pdata[19],thr_id);
-//			pthread_rwlock_rdlock(&rwlock);
+
 		foundNonce = mtp_cpu_hash_32(thr_id, throughput, pdata[19]);
-//			pthread_rwlock_unlock(&rwlock);
+
 		uint32_t _ALIGN(64) vhash64[8];
 		if (foundNonce != UINT32_MAX)
 		{
@@ -190,20 +177,14 @@ pthread_mutex_unlock(&work_lock);
 
 				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)* MTP_L * 3 * 353);
 				
-//				pthread_rwlock_unlock(&rwlock);
-//				printf("found a solution, nonce %08x\n",pdata[19]);
-//				free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
-//				pthread_mutex_destroy(&work_lock);
-//				pthread_mutex_destroy(&work_lock);
-//				pthread_rwlock_destroy(&rwlock);
 				return res;
 
 			} else {
 				gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU!", foundNonce);
-//				pthread_rwlock_unlock(&rwlock);
+
 			}
 		}
-//		pthread_rwlock_unlock(&rwlock);
+
 		work_set_target_ratio(work, vhash64);
 		
 /*
@@ -213,17 +194,14 @@ pthread_mutex_unlock(&work_lock);
 		}
 */
 		pdata[19] += throughput;
-//		be32enc(&endiandata[19], pdata[19]);
-//	}   while (!work_restart[thr_id].restart && pdata[19]<real_maxnonce && JobId==work->data[17]);
+
+	}   while (!work_restart[thr_id].restart && pdata[19]<real_maxnonce && JobId==work->data[17] && pdata[19]<(first_nonce+128*throughput));
 
 TheEnd:
-//	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
+
 	*hashes_done = pdata[19] - first_nonce;
 
-//	ordered_tree.~MerkleTree();
-//	TheElements.clear();
-//	pthread_mutex_destroy(&work_lock);
-//	pthread_rwlock_destroy(&rwlock);
+
 	return 0;
 }
 
