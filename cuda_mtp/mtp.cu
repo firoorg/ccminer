@@ -195,7 +195,7 @@ do  {
 */
 		pdata[19] += throughput;
 
-	}   while (!work_restart[thr_id].restart && pdata[19]<real_maxnonce && JobId==work->data[17] && pdata[19]<(first_nonce+128*throughput));
+	}   while (!work_restart[thr_id].restart && pdata[19]<real_maxnonce && JobId==work->data[17] /*&& pdata[19]<(first_nonce+128*throughput)*/);
 
 TheEnd:
 

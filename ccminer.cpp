@@ -1150,7 +1150,7 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 		bos_t *serialized = bos_serialize(MyObject, boserror);
 
 		stratum.sharediff = work->sharediff[0];
-
+		sleep(1);
 		if (unlikely(!stratum_send_line_bos(&stratum, serialized))) {
 			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
 			return false;
