@@ -112,9 +112,10 @@ if (JobId!=0)
 for (int i=0;i<nthreads;i++) {
 	mtp_setBlockTarget(i,endiandata,ptarget,&TheMerkleRoot);
 }
+/*
 printf("filling memory\n");
 const int datachunk = 512;
-for (int i=0;i<((uint32_t)memcost/ datachunk) /* && !work_restart[thr_id].restart*/;i++) {
+for (int i=0;i<((uint32_t)memcost/ datachunk);i++) {
 uint64_t *Truc =(uint64_t *) malloc(128* datachunk*sizeof(uint64_t));
 	
 	for (int j=0;j<datachunk;j++)
@@ -125,12 +126,25 @@ for (int k=0;k<nthreads;k++)
 	free(Truc);
 }
 printf("memory filled \n");
-
+*/
 
 }
 
 pthread_mutex_unlock(&work_lock);
 
+printf("filling memory\n");
+const int datachunk = 512;
+for (int i = 0; i<((uint32_t)memcost / datachunk) /* && !work_restart[thr_id].restart*/; i++) {
+	uint64_t *Truc = (uint64_t *)malloc(128 * datachunk * sizeof(uint64_t));
+
+	for (int j = 0; j<datachunk; j++)
+		memcpy(&Truc[128 * j], instance.memory[datachunk*i + j].v, 128 * sizeof(uint64_t));
+	
+		mtp_fill(thr_id, Truc, i, datachunk);
+
+	free(Truc);
+}
+printf("memory filled \n");
 
 
 	if (work_restart[thr_id].restart) goto TheEnd;
