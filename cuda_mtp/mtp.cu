@@ -23,6 +23,7 @@ extern void mtp_fill(uint32_t d, const uint64_t *Block, uint32_t offset, uint32_
 static bool init[MAX_GPUS] = { 0 };
 static __thread uint32_t throughput = 0;
 static uint32_t JobId = {0};
+static bool fillGpu[MAX_GPUS] = {false};
 static  MerkleTree::Elements TheElements;
 static  MerkleTree ordered_tree;
 static  unsigned char TheMerkleRoot[16];
@@ -111,6 +112,8 @@ if (JobId!=0)
 
 for (int i=0;i<nthreads;i++) {
 	mtp_setBlockTarget(i,endiandata,ptarget,&TheMerkleRoot);
+for (int i=0;i<nthreads;i++)
+	fillGpu[i] = true;
 }
 /*
 printf("filling memory\n");
@@ -132,6 +135,8 @@ printf("memory filled \n");
 
 pthread_mutex_unlock(&work_lock);
 
+if (fillGpu[thr_id]) {
+
 printf("filling memory\n");
 const int datachunk = 512;
 for (int i = 0; i<((uint32_t)memcost / datachunk) /* && !work_restart[thr_id].restart*/; i++) {
@@ -145,6 +150,8 @@ for (int i = 0; i<((uint32_t)memcost / datachunk) /* && !work_restart[thr_id].re
 	free(Truc);
 }
 printf("memory filled \n");
+fillGpu[thr_id]=false;
+}
 
 
 	if (work_restart[thr_id].restart) goto TheEnd;
