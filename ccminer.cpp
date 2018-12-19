@@ -4672,7 +4672,14 @@ void parse_arg(int key, char *arg)
 						proper_exit(EXIT_CODE_CUDA_NODEVICE);
 					}
 				} else {
-					int device = cuda_finddevice(pch);
+					int device; // = cuda_finddevice(pch);
+					if (pch[2] == '\0') {
+						device = atoi(pch);
+					}
+					else {
+						device = cuda_finddevice(pch);
+					}
+
 					if (device >= 0 && device < ngpus)
 						device_map[opt_n_threads++] = device;
 					else {
