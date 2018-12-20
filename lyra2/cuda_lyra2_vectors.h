@@ -453,6 +453,8 @@ static __device__ __inline__ uint28 __ldg4(const uint28 *ptr)
 	return ret;
 }
 
+
+
 static __device__ __inline__ uint48 __ldg4(const uint48 *ptr)
 {
 	uint48 ret;
