@@ -156,7 +156,7 @@ fillGpu[thr_id]=false;
 
 	if (work_restart[thr_id].restart) goto TheEnd;
 		pdata[19] = first_nonce;
-do  {
+//do  {
 //		printf("work->data[17]=%08x\n", work->data[17]);
 		uint32_t foundNonce;
 
@@ -216,7 +216,7 @@ do  {
 */
 		pdata[19] += throughput;
 
-	}   while (!work_restart[thr_id].restart && pdata[19]<real_maxnonce && JobId==work->data[17] /*&& pdata[19]<(first_nonce+128*throughput)*/);
+//	}   while (!work_restart[thr_id].restart && pdata[19]<real_maxnonce && JobId==work->data[17] /*&& pdata[19]<(first_nonce+128*throughput)*/);
 
 TheEnd:
 
