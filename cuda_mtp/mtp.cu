@@ -139,7 +139,7 @@ if (fillGpu[thr_id]) {
 
 printf("filling memory\n");
 const int datachunk = 512;
-for (int i = 0; i<((uint32_t)memcost / datachunk) /* && !work_restart[thr_id].restart*/; i++) {
+for (int i = 0; i<((uint32_t)memcost / datachunk) // && !work_restart[thr_id].restart; i++) {
 	uint64_t *Truc = (uint64_t *)malloc(128 * datachunk * sizeof(uint64_t));
 
 	for (int j = 0; j<datachunk; j++)
