@@ -115,7 +115,7 @@ for (int i=0;i<nthreads;i++) {
 for (int i=0;i<nthreads;i++)
 	fillGpu[i] = true;
 }
-/*
+
 printf("filling memory\n");
 const int datachunk = 512;
 for (int i=0;i<((uint32_t)memcost/ datachunk);i++) {
@@ -129,12 +129,12 @@ for (int k=0;k<nthreads;k++)
 	free(Truc);
 }
 printf("memory filled \n");
-*/
+
 
 }
 
 pthread_mutex_unlock(&work_lock);
-
+/*
 if (fillGpu[thr_id]) {
 
 printf("filling memory\n");
@@ -153,7 +153,7 @@ printf("memory filled \n");
 fillGpu[thr_id]=false;
 }
 
-
+*/
 	if (work_restart[thr_id].restart) goto TheEnd;
 		pdata[19] = first_nonce;
 //do  {
