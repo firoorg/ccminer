@@ -90,12 +90,12 @@ if (JobId==0)
 		endiandata[k] = pdata[k];
 	
 
-	if (JobId != work->data[17] || XtraNonce2!= ((uint64_t*)work->xnonce2)[0]) {
+	if (JobId != work->data[17] /*|| XtraNonce2!= ((uint64_t*)work->xnonce2)[0]*/) {
 pthread_barrier_wait(&barrier);
 	}
 pthread_mutex_lock(&work_lock);
 
-if (JobId!= work->data[17] || XtraNonce2 != ((uint64_t*)work->xnonce2)[0]){
+if (JobId!= work->data[17] /*|| XtraNonce2 != ((uint64_t*)work->xnonce2)[0]*/){
 
 if (JobId!=0)
 	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
@@ -109,7 +109,7 @@ if (JobId!=0)
 
 	ordered_tree = MerkleTree(TheElements, true);
 	JobId = work->data[17];
-	XtraNonce2 = ((uint64_t*)work->xnonce2)[0];
+//	XtraNonce2 = ((uint64_t*)work->xnonce2)[0];
 
 	MerkleTree::Buffer root = ordered_tree.getRoot();
 	std::copy(root.begin(), root.end(), TheMerkleRoot);
@@ -223,12 +223,13 @@ fillGpu[thr_id]=false;
 //	}   while (!work_restart[thr_id].restart   && pdata[19]<real_maxnonce && JobId==work->data[17] && XtraNonce2 == ((uint64_t*)work->xnonce2)[0]);//*&& pdata[19]<(first_nonce+128*throughput)*/);
 
 TheEnd:
+/*
 		pthread_mutex_lock(&work_lock);
 		if (pdata[19] >= real_maxnonce)
 			for (int i = 0; i < (int)gwork->xnonce2_len && !++gwork->xnonce2[i]; i++);
 
 		pthread_mutex_unlock(&work_lock);
-
+*/
 	*hashes_done = pdata[19] - first_nonce;
 
 

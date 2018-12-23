@@ -2593,17 +2593,17 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	snprintf(work->job_id, sizeof(work->job_id), "%07x %s",
 		be32dec(sctx->job.ntime) & 0xfffffff, sctx->job.job_id);
 	work->xnonce2_len = sctx->xnonce2_size;
-
+	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
 
 
 	unsigned char* Transfer = (unsigned char*)malloc(sctx->job.coinbase_size);
 
-
+/*
 	if (opt_algo==ALGO_MTP) {
 	memcpy(Transfer, sctx->job.coinbase, sctx->job.coinbase_size);
 	memcpy(Transfer + 60, work->xnonce2, 8);
 	}
-
+*/
 
 	// also store the block number
 	work->height = sctx->job.height;
