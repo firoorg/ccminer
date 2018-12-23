@@ -22,7 +22,8 @@ extern void mtp_fill(uint32_t d, const uint64_t *Block, uint32_t offset, uint32_
 
 static bool init[MAX_GPUS] = { 0 };
 static __thread uint32_t throughput = 0;
-static uint32_t JobId = {0};
+static uint32_t JobId = 0;
+static uint64_t XtraNonce2 = 0;
 static bool fillGpu[MAX_GPUS] = {false};
 static  MerkleTree::Elements TheElements;
 static  MerkleTree ordered_tree;
@@ -32,10 +33,11 @@ static argon2_instance_t instance;
 static pthread_mutex_t work_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_barrier_t barrier;
 static pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
-extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp)
+extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp,struct work* gwork)
 {
 
 	unsigned char mtpHashValue[32];
+
 
 
 if (JobId==0)
@@ -46,6 +48,7 @@ if (JobId==0)
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	int real_maxnonce = UINT32_MAX / nthreads * (thr_id + 1);
+
 	if (opt_benchmark)
 		ptarget[7] = 0x00ff;
 
@@ -87,12 +90,12 @@ if (JobId==0)
 		endiandata[k] = pdata[k];
 	
 
-	if (JobId != work->data[17]) {
+	if (JobId != work->data[17] || XtraNonce2!= ((uint64_t*)work->xnonce2)[0]) {
 pthread_barrier_wait(&barrier);
 	}
 pthread_mutex_lock(&work_lock);
 
-if (JobId!= work->data[17]){
+if (JobId!= work->data[17] || XtraNonce2 != ((uint64_t*)work->xnonce2)[0]){
 
 if (JobId!=0)
 	free_memory(&context, (unsigned char *)instance.memory, instance.memory_blocks, sizeof(block));
@@ -100,12 +103,13 @@ if (JobId!=0)
 
 	context = init_argon2d_param((const char*)endiandata);
 	argon2_ctx_from_mtp(&context, &instance);
-
+//	printf("extranonce2 %llx  XtraNonce2 %llx thread_id %d\n", ((uint64_t*)work->xnonce2)[0], XtraNonce2,thr_id);
 
     TheElements = mtp_init2(&instance);
 
 	ordered_tree = MerkleTree(TheElements, true);
 	JobId = work->data[17];
+	XtraNonce2 = ((uint64_t*)work->xnonce2)[0];
 
 	MerkleTree::Buffer root = ordered_tree.getRoot();
 	std::copy(root.begin(), root.end(), TheMerkleRoot);
@@ -216,9 +220,14 @@ fillGpu[thr_id]=false;
 */
 		pdata[19] += throughput;
 
-//	}   while (!work_restart[thr_id].restart && pdata[19]<real_maxnonce && JobId==work->data[17] /*&& pdata[19]<(first_nonce+128*throughput)*/);
+//	}   while (!work_restart[thr_id].restart   && pdata[19]<real_maxnonce && JobId==work->data[17] && XtraNonce2 == ((uint64_t*)work->xnonce2)[0]);//*&& pdata[19]<(first_nonce+128*throughput)*/);
 
 TheEnd:
+		pthread_mutex_lock(&work_lock);
+		if (pdata[19] >= real_maxnonce)
+			for (int i = 0; i < (int)gwork->xnonce2_len && !++gwork->xnonce2[i]; i++);
+
+		pthread_mutex_unlock(&work_lock);
 
 	*hashes_done = pdata[19] - first_nonce;
 

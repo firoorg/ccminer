@@ -2372,6 +2372,7 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	sctx->job.coinbase = (uchar*) realloc(sctx->job.coinbase, sctx->job.coinbase_size);
 	sctx->job.xnonce2 = sctx->job.coinbase + coinb1_size + sctx->xnonce1_size;
 	hex2bin(sctx->job.coinbase, coinb1, coinb1_size);
+
 	memcpy(sctx->job.coinbase + coinb1_size, sctx->xnonce1, sctx->xnonce1_size);
 
 	if (!sctx->job.job_id || strcmp(sctx->job.job_id, job_id))
@@ -2483,6 +2484,7 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 
 	sctx->job.coinbase_size = coinb1_size + sctx->xnonce1_size +
 		sctx->xnonce2_size + coinb2_size;
+
 	sctx->job.coinbase = (uchar*)realloc(sctx->job.coinbase, sctx->job.coinbase_size);
 	sctx->job.xnonce2 = sctx->job.coinbase + coinb1_size + sctx->xnonce1_size;
 	memcpy(sctx->job.coinbase, coinb1, coinb1_size);
@@ -2504,9 +2506,9 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 /*
 	if (has_claim) memcpy(sctx->job.extra, extradata, 32);
 	if (has_roots) memcpy(sctx->job.extra, extradata, 64);
-
-	sctx->bloc_height = getblocheight(sctx);
 */
+	sctx->job.height = getblocheight(sctx);
+
 	for (i = 0; i < sctx->job.merkle_count; i++)
 		free(sctx->job.merkle[i]);
 	free(sctx->job.merkle);
