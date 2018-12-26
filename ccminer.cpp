@@ -452,7 +452,6 @@ Scrypt specific options:\n\
 struct work _ALIGN(64) g_work;
 volatile time_t g_work_time;
 pthread_mutex_t g_work_lock;
-static bool incx2 = false;
 static char *lp_id;
 
 // get const array size (defined in ccminer.cpp)
@@ -2565,18 +2564,6 @@ static bool stratum_gen_work_m7(struct stratum_ctx *sctx, struct work *work)
 return true;
 }
 
-static bool increment_X2(struct work *work)
-{
-	int i;
-	pthread_mutex_lock(&stratum_work_lock);
-	//	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
-	for (i = 0; i < (int)work->xnonce2_len && !++work->xnonce2[i]; i++);
-
-	printf("to be transfered %llx \n", ((uint64_t*)work->xnonce2)[0]);
-	pthread_mutex_unlock(&stratum_work_lock);
-	return true;
-}
-
 static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 {
 	uchar merkle_root[64] = { 0 };
@@ -2589,21 +2576,19 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	pthread_mutex_lock(&stratum_work_lock);
 
+	// store the job ntime as high part of jobid
+//	free(work->job_id);
+//	work->job_id = strdup(sctx->job.job_id);
+//	for (int i=0;i<4;i++)
+//	work->job_iduc[i] = sctx->job.ucjob_id[i];
 
 	snprintf(work->job_id, sizeof(work->job_id), "%07x %s",
 		be32dec(sctx->job.ntime) & 0xfffffff, sctx->job.job_id);
 	work->xnonce2_len = sctx->xnonce2_size;
 	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
 
-
-	unsigned char* Transfer = (unsigned char*)malloc(sctx->job.coinbase_size);
-
-/*
-	if (opt_algo==ALGO_MTP) {
-	memcpy(Transfer, sctx->job.coinbase, sctx->job.coinbase_size);
-	memcpy(Transfer + 60, work->xnonce2, 8);
-	}
-*/
+//	printf("thefull job id %s\n",work->job_id);
+//	printf("reduced job id %s\n", work->job_id+8);
 
 	// also store the block number
 	work->height = sctx->job.height;
@@ -2612,30 +2597,26 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	/* Generate merkle root */
 	switch (opt_algo) {
-	case ALGO_DECRED:
-	case ALGO_SIA:
-		// getwork over stratum, no merkle to generate
-		break;
-	case ALGO_HEAVY:
-	case ALGO_MJOLLNIR:
-		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
-		break;
-	case ALGO_FUGUE256:
-	case ALGO_GROESTL:
-	case ALGO_KECCAK:
-	case ALGO_BLAKECOIN:
-	case ALGO_WHIRLCOIN:
-		SHA256((uchar*)sctx->job.coinbase, sctx->job.coinbase_size, (uchar*)merkle_root);
-		break;
-	case ALGO_MTP:
-		sha256d(merkle_root, Transfer, (int)sctx->job.coinbase_size);
-		break;
-	case ALGO_WHIRLPOOL:
-	default:
-		sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
-		
+		case ALGO_DECRED:
+		case ALGO_SIA:
+			// getwork over stratum, no merkle to generate
+			break;
+		case ALGO_HEAVY:
+		case ALGO_MJOLLNIR:
+			heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
+			break;
+		case ALGO_FUGUE256:
+		case ALGO_GROESTL:
+		case ALGO_KECCAK:
+		case ALGO_BLAKECOIN:
+		case ALGO_WHIRLCOIN:
+			SHA256((uchar*)sctx->job.coinbase, sctx->job.coinbase_size, (uchar*)merkle_root);
+			break;
+		case ALGO_WHIRLPOOL:
+		default:
+			sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	}
-	free(Transfer);
+
 	for (i = 0; i < sctx->job.merkle_count; i++) {
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
 		if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
@@ -2643,6 +2624,9 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		else
 			sha256d(merkle_root, merkle_root, 64);
 	}
+	
+	/* Increment extranonce2 */
+//	for (i = 0; i < (int)sctx->xnonce2_size && !++sctx->job.xnonce2[i]; i++);
 
 	/* Assemble block header */
 	memset(work->data, 0, sizeof(work->data));
@@ -2661,17 +2645,16 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		vote = (opt_vote << 1) | (vote & 1);
 		memcpy(&work->data[25], &vote, 2);
 		// extradata
-		if (sctx->xnonce1_size > sizeof(work->data) - (36 * 4)) {
+		if (sctx->xnonce1_size > sizeof(work->data)-(36*4)) {
 			// should never happen...
 			applog(LOG_ERR, "extranonce size overflow!");
-			sctx->xnonce1_size = sizeof(work->data) - (36 * 4);
+			sctx->xnonce1_size = sizeof(work->data)-(36*4);
 		}
 		memcpy(&work->data[36], sctx->xnonce1, sctx->xnonce1_size);
-		work->data[37] = (rand() * 4) << 8; // random work data
+		work->data[37] = (rand()*4) << 8; // random work data
 		sctx->job.height = work->data[32];
 		//applog_hex(work->data, 180);
-	}
-	else if (opt_algo == ALGO_LBRY) {
+	} else if (opt_algo == ALGO_LBRY) {
 		for (i = 0; i < 8; i++)
 			work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
 		for (i = 0; i < 8; i++)
@@ -2679,12 +2662,11 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[25] = le32dec(sctx->job.ntime);
 		work->data[26] = le32dec(sctx->job.nbits);
 		work->data[28] = 0x80000000;
-	}
-	else if (opt_algo == ALGO_SIA) {
+	} else if (opt_algo == ALGO_SIA) {
 		uint32_t extra = 0;
 		memcpy(&extra, &sctx->job.coinbase[32], 2);
 		for (i = 0; i < 8; i++) // reversed hash
-			work->data[i] = ((uint32_t*)sctx->job.prevhash)[7 - i];
+			work->data[i] = ((uint32_t*)sctx->job.prevhash)[7-i];
 		work->data[8] = 0; // nonce
 		work->data[9] = swab32(extra) | ((rand() << 8) & 0xffff);
 		work->data[10] = be32dec(sctx->job.ntime);
@@ -2692,8 +2674,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		memcpy(&work->data[12], sctx->job.coinbase, 32); // merkle_root
 		work->data[20] = 0x80000000;
 		if (opt_debug) applog_hex(work->data, 80);
-	}
-	else if (opt_algo == ALGO_MTP)
+	} else if (opt_algo == ALGO_MTP)
 	{
 		for (i = 0; i < 8; i++)
 			work->data[9 + i] = le32dec((uint32_t *)merkle_root + i);
@@ -2701,8 +2682,11 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		work->data[18] = le32dec(sctx->job.nbits);
 		work->data[20] = 0x00100000;
 
-	}
-	else {
+//		for (int k = 0; k < 20; k++) {
+//			printf(" %08x", work->data[k]);
+//		}
+//		printf("\n");
+	} else {
 		for (i = 0; i < 8; i++)
 			work->data[9 + i] = be32dec((uint32_t *)merkle_root + i);
 		work->data[17] = le32dec(sctx->job.ntime);
@@ -2740,7 +2724,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		char *tm = atime2str(utm - sctx->srvtime_diff);
 		char *xnonce2str = bin2hex(work->xnonce2, sctx->xnonce2_size);
 		applog(LOG_DEBUG, "DEBUG: job_id=%s xnonce2=%s time=%s",
-			work->job_id, xnonce2str, tm);
+		       work->job_id, xnonce2str, tm);
 		free(tm);
 		free(xnonce2str);
 	}
@@ -2749,30 +2733,30 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		opt_difficulty = 1.;
 
 	switch (opt_algo) {
-	case ALGO_MTP:
-		work_set_target_mtp(work, sctx->next_target);
-		break;
-	case ALGO_JACKPOT:
-	case ALGO_NEOSCRYPT:
-	case ALGO_SCRYPT:
-	case ALGO_SCRYPT_JANE:
-		work_set_target(work, sctx->job.diff / (65536.0 * opt_difficulty));
-		break;
-	case ALGO_DMD_GR:
-	case ALGO_FRESH:
-	case ALGO_FUGUE256:
-	case ALGO_GROESTL:
-	case ALGO_LBRY:
-	case ALGO_LYRA2Z:
-	case ALGO_LYRA2v2:
-		work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));
-		break;
-	case ALGO_KECCAK:
-	case ALGO_LYRA2:
-		work_set_target(work, sctx->job.diff / (128.0 * opt_difficulty));
-		break;
-	default:
-		work_set_target(work, sctx->job.diff / opt_difficulty);
+		case ALGO_MTP:
+				work_set_target_mtp(work, sctx->next_target);
+			break;
+		case ALGO_JACKPOT:
+		case ALGO_NEOSCRYPT:
+		case ALGO_SCRYPT:
+		case ALGO_SCRYPT_JANE:
+			work_set_target(work, sctx->job.diff / (65536.0 * opt_difficulty));
+			break;
+		case ALGO_DMD_GR:
+		case ALGO_FRESH:
+		case ALGO_FUGUE256:
+		case ALGO_GROESTL:
+		case ALGO_LBRY:
+		case ALGO_LYRA2Z:
+		case ALGO_LYRA2v2:
+			work_set_target(work, sctx->job.diff / (256.0 * opt_difficulty));
+			break;
+		case ALGO_KECCAK:
+		case ALGO_LYRA2:
+			work_set_target(work, sctx->job.diff / (128.0 * opt_difficulty));
+			break;
+		default:
+			work_set_target(work, sctx->job.diff / opt_difficulty);
 	}
 
 	if (stratum_diff != sctx->job.diff) {
@@ -2783,9 +2767,9 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 			snprintf(sdiff, 32, " (%.5f)", work->targetdiff);
 		applog(LOG_WARNING, "Stratum difficulty set to %g%s", stratum_diff, sdiff);
 	}
+
 	return true;
 }
-
 
 void restart_threads(void)
 {
@@ -2862,8 +2846,7 @@ static void *miner_thread(void *userdata)
 	struct work work;
 	uint64_t loopcnt = 0;
 	uint32_t max_nonce;
-	uint32_t end_nonce = UINT32_MAX / opt_n_threads * (thr_id + 1); //- (thr_id + 1);
-	
+	uint32_t end_nonce = UINT32_MAX / opt_n_threads * (thr_id + 1) - (thr_id + 1);
 	time_t tm_rate_log = 0;
 	bool work_done = false;
 	bool extrajob = false;
@@ -2929,7 +2912,6 @@ static void *miner_thread(void *userdata)
 		uint64_t max64, minmax = 0x100000;
 		int nodata_check_oft = 0;
 		bool regen = false;
-//		bool incx2 = false;
 		int wcmplen;
 		int wcmpoft;
 		switch(opt_algo)
@@ -2987,19 +2969,14 @@ static void *miner_thread(void *userdata)
 			extrajob |= work_done;
 
 			regen = (nonceptr[0] >= end_nonce);
-			incx2 = (nonceptr[0] >= end_nonce);
-
-
 			if (opt_algo == ALGO_SIA) {
 				regen = ((nonceptr[1] & 0xFF00) >= 0xF000);
 			}
 			regen = regen || extrajob;
 
-			if (regen /*|| opt_algo == ALGO_MTP*/) {
-
+			if (regen || opt_algo == ALGO_MTP) {
 				work_done = false;
 				extrajob = false;
-
 			if (opt_algo == ALGO_M7) {
 				if (stratum_gen_work_m7(&stratum, &g_work)) g_work_time = time(NULL);}
 			else {
@@ -3405,7 +3382,7 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_qubit(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_MTP:
-			rc = scanhash_mtp(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, mtp,&g_work);
+			rc = scanhash_mtp(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, mtp);
 			break;
 		case ALGO_LYRA2:
 			rc = scanhash_lyra2(thr_id, &work, max_nonce, &hashes_done);
@@ -3490,7 +3467,6 @@ static void *miner_thread(void *userdata)
 			goto out;
 		}
 
-		
 		if (opt_led_mode == LED_MODE_MINING)
 			gpu_led_off(dev_id);
 
