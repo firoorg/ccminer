@@ -157,7 +157,7 @@ if (JobId[thr_id] != work->data[17]) {
 	//printf("coming here2\n");
 	context[thr_id] = init_argon2d_param((const char*)endiandata);
 	argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
-printf("after argon2\n");
+
 	for (int i = 0; i<MEM[thr_id].size(); i++)
 		free(MEM[thr_id][i]);
 	//printf("filling memory\n");
