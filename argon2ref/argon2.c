@@ -149,11 +149,13 @@ int argon2_ctx_from_mtp(argon2_context *context, argon2_instance_t *instance) {
 
 
 	/* 4. Filling memory */
+/*
 	result = fill_memory_blocks_mtp(instance);
 
 	if (ARGON2_OK != result) {
 		return result;
 	}
+*/
 	/* 5. Finalization */
 	//finalize(context, &instance);
 

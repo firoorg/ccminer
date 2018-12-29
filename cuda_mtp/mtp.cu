@@ -157,7 +157,7 @@ if (JobId[thr_id] != work->data[17]) {
 	//printf("coming here2\n");
 	context[thr_id] = init_argon2d_param((const char*)endiandata);
 	argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
-
+printf("after argon2\n");
 	for (int i = 0; i<MEM[thr_id].size(); i++)
 		free(MEM[thr_id][i]);
 	//printf("filling memory\n");
@@ -171,17 +171,17 @@ if (JobId[thr_id] != work->data[17]) {
 	mtp_fill_1b(thr_id, instance[thr_id].memory[4 + 1].v, 2097152 + 1);
 	mtp_fill_1b(thr_id, instance[thr_id].memory[6 + 0].v, 3145728 + 0);
 	mtp_fill_1b(thr_id, instance[thr_id].memory[6 + 1].v, 3145728 + 1);
-	uint8_t *x = (uint8_t*)malloc(MERKLE_TREE_ELEMENT_SIZE_B*instance->memory_blocks);
-	mtp_i_cpu(thr_id, instance[thr_id].block_header);
-
-	//	MerkleTree::Elements TheElements = mtp_init2(&instance[thr_id], thr_id);
-//	printf("Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory \n");
 //	uint8_t *x = (uint8_t*)malloc(MERKLE_TREE_ELEMENT_SIZE_B*instance->memory_blocks);
+	mtp_i_cpu(thr_id, instance[thr_id].block_header);
+//	printf("after argon3\n");
+	//	MerkleTree::Elements TheElements = mtp_init2(&instance[thr_id], thr_id);
+	printf("Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory \n");
+	uint8_t *x = (uint8_t*)malloc(MERKLE_TREE_ELEMENT_SIZE_B*instance->memory_blocks);
 	get_tree(thr_id,x);
 	printf("Step 2 : Compute the root Φ of the Merkle hash tree \n");
 
 //	uint8_t * x = mtp_init3(&instance[thr_id], thr_id);
-
+//	printf("after argon4\n");
 	//	ordered_tree[thr_id] = MerkleTree(TheElements, true);
 	ordered_tree[thr_id] = MerkleTree(x, true);
 	//	gpulog(LOG_WARNING, thr_id, "filled blocks on GPU\n");
@@ -193,6 +193,7 @@ if (JobId[thr_id] != work->data[17]) {
 	//for(;;);
 	std::copy(root.begin(), root.end(), TheMerkleRoot[thr_id]);
 	MEM[thr_id] = ordered_tree[thr_id].getMem();
+//	printf("after argon4\n");
 	//	mtp_setBlockTarget(0,endiandata,ptarget,&TheMerkleRoot);
 	mtp_setBlockTarget(thr_id, endiandata, ptarget, &TheMerkleRoot[thr_id]);
 
