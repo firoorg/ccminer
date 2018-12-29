@@ -4899,6 +4899,7 @@ int main(int argc, char *argv[])
 	printf("  Originally based on Christian Buchner and Christian H. project based on tpruvot 1.8.4 release\n");
 	printf("  Include algos from alexis78, djm34, sp, tsiv and klausT.\n");
 	printf("  *** News (07/06/2018): MTP algo for ZCoin \n\n");
+	printf("  MTP algo based on krnlx kernel\n\n");
 	printf("BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze (djm34)\n");
 	printf("ZCoin donation address: aChWVb8CpgajadpLmiwDZvZaKizQgHxfh5 (djm34)\n\n");
 

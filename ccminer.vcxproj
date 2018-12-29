@@ -174,8 +174,7 @@
       <Optimization>MaxSpeed</Optimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <EnableEnhancedInstructionSet>
-      </EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <OpenMPSupport>true</OpenMPSupport>
       <CompileAsManaged>false</CompileAsManaged>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -204,13 +203,13 @@
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
       <MaxRegCount>80</MaxRegCount>
-      <PtxAsOptionV>false</PtxAsOptionV>
+      <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
-      <CodeGeneration>compute_61,sm_61</CodeGeneration>
+      <CodeGeneration>compute_52,sm_52</CodeGeneration>
       <Include>$(NVTOOLSEXT_PATH)\include;..\..\..\Common\C99</Include>
       <Optimization>O3</Optimization>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <InterleaveSourceInPTX>false</InterleaveSourceInPTX>
+      <InterleaveSourceInPTX>true</InterleaveSourceInPTX>
       <GenerateLineInfo>false</GenerateLineInfo>
     </CudaCompile>
     <CudaLink>
@@ -244,6 +243,9 @@
     <ClInclude Include="argon2ref\argon2.h" />
     <ClInclude Include="argon2ref\blake2-impl.h" />
     <ClInclude Include="argon2ref\blake2.h" />
+    <ClInclude Include="argon2ref\blake2b-load-sse2.h" />
+    <ClInclude Include="argon2ref\blake2b-load-sse41.h" />
+    <ClInclude Include="argon2ref\blake2b-round.h" />
     <ClInclude Include="argon2ref\blamka-round-opt.h" />
     <ClInclude Include="argon2ref\blamka-round-ref.h" />
     <ClInclude Include="argon2ref\core.h" />

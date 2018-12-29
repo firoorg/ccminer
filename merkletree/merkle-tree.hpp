@@ -36,6 +36,8 @@ public :
      */
     typedef std::deque<Buffer> Elements;
 
+    //typedef std::vector<uint8_t*> mem; 
+ 
     /** Constructor
      *
      * If `preserveOrder` is set to `true`, the `elements` will be used in
@@ -52,7 +54,7 @@ public :
      * \throw `std::runtime_error` if `elements` contains an element which is
      *        not of the right size, \see MERKLE_TREE_ELEMENT_SIZE_B.
      */
-    MerkleTree(const Elements& elements, bool preserveOrder = true);
+    MerkleTree(uint8_t* elements, bool preserveOrder = true);
 	MerkleTree();
     /** Destructor */
     virtual ~MerkleTree();
@@ -79,8 +81,15 @@ public :
     /** Get the root hash of the Merkle Tree */
     Buffer getRoot() const
     {
-        return layers_.back()[0];
+	  MerkleTree::Buffer ret = MerkleTree::Buffer(mem.back(),mem.back() + MERKLE_TREE_ELEMENT_SIZE_B);
+	return ret;
+//        return layers_.back()[0];
     }
+
+    std::vector<uint8_t*> getMem() const
+	{
+	return mem;
+	}
 
     /** Compute a root hash given a set of hashes
      *
@@ -214,9 +223,12 @@ private :
     typedef std::deque<Elements> Layers;
 
     bool     preserveOrder_; /**< Whether to preserve the initial order */
-    Elements elements_;      /**< Leaves of the Merkle Tree */
-    Layers   layers_;        /**< The various layers of the Merkle Tree */
+//    Elements elements_;      /**< Leaves of the Merkle Tree */
+//    Layers   layers_;        /**< The various layers of the Merkle Tree */
 
+
+     std::vector<uint8_t*> mem;
+//    uint8_t *mem[64];
     /** Build the Merkle Tree layers */
     void getLayers();
 
@@ -241,7 +253,8 @@ private :
      *         the `layer` has an odd number of elements, and you are asking
      *         for the last one, which obviously has no peer)
      */
-    static bool getPair(const Elements& layer, size_t index, Buffer& pair);
+//    static bool getPair(const Elements& layer, size_t index, Buffer& pair);
+    static bool getPair2(std::vector<uint8_t*> m, size_t chunk_index, size_t index, Buffer& pair);
 
     /** Converts a list of hashes into a hexadecimal string */
     static std::string elementsToHex(const Elements& elements);

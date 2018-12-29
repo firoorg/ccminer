@@ -32,6 +32,8 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  argon2ref/argon2.h  argon2ref/blake2.h    \
 			  argon2ref/blamka-round-opt.h  argon2ref/core.c   \           
 			  argon2ref/encoding.c  argon2ref/ref.c   argon2ref/thread.h \
+			  argon2ref/blake2b-load-sse2.h argon2ref/blake2b-load-sse41.h \
+			  argon2ref/blake2b-round.h argon2re/blake2-impl.h \
 			  heavy/heavy.cu \
 			  heavy/cuda_blake512.cu heavy/cuda_blake512.h \
 			  heavy/cuda_combine.cu heavy/cuda_combine.h \

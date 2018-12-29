@@ -593,6 +593,15 @@
     <ClInclude Include="compat\bignum_ssl10.hpp">
       <Filter>Header Files\compat</Filter>
     </ClInclude>
+    <ClInclude Include="argon2ref\blake2b-round.h">
+      <Filter>Header Files\argon2ref</Filter>
+    </ClInclude>
+    <ClInclude Include="argon2ref\blake2b-load-sse2.h">
+      <Filter>Header Files\argon2ref</Filter>
+    </ClInclude>
+    <ClInclude Include="argon2ref\blake2b-load-sse41.h">
+      <Filter>Header Files\argon2ref</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda.cpp">
