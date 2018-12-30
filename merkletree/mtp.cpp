@@ -397,7 +397,7 @@ void clear_internal_memory(void *v, size_t n) {
 void free_memory(const argon2_context *context, uint8_t *memory,
 	size_t num, size_t size) {
 	size_t memory_size = num*size;
-	clear_internal_memory(memory, memory_size);
+//	clear_internal_memory(memory, memory_size);
 	if (context->free_cbk) {
 		(context->free_cbk)(memory, memory_size);
 	}

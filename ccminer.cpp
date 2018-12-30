@@ -3008,7 +3008,7 @@ static void *miner_thread(void *userdata)
 			}
 			regen = regen || extrajob;
 
-			if (regen) {
+			if (regen || opt_algo == ALGO_MTP) {
 				
 
 				work_done = false;

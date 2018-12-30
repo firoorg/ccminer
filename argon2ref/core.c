@@ -100,7 +100,8 @@ int allocate_memory(const argon2_context *context, uint8_t **memory,
     if (context->allocate_cbk) {
         (context->allocate_cbk)(memory, memory_size);
     } else {
-        *memory = malloc(memory_size);
+		*memory = malloc(128 * 8 * 2 * 4 * 2);
+//        *memory = malloc(memory_size);
     }
 
     if (*memory == NULL) {
@@ -590,16 +591,21 @@ void fill_first_blocks(uint8_t *blockhash, const argon2_instance_t *instance) {
         ablake2b_long(blockhash_bytes, ARGON2_BLOCK_SIZE, blockhash,
                      ARGON2_PREHASH_SEED_LENGTH);
 
-        load_block(&instance->memory[l * instance->lane_length + 0],
-                   blockhash_bytes);
+    //    load_block(&instance->memory[l * instance->lane_length + 0],
+    //               blockhash_bytes);
+
+		load_block(&instance->memory[l * 2 + 0],
+			blockhash_bytes);
 
         store32(blockhash + ARGON2_PREHASH_DIGEST_LENGTH, 1);
 
 
         ablake2b_long(blockhash_bytes, ARGON2_BLOCK_SIZE, blockhash,
                      ARGON2_PREHASH_SEED_LENGTH);
-        load_block(&instance->memory[l * instance->lane_length + 1],
-                   blockhash_bytes);
+//        load_block(&instance->memory[l * instance->lane_length + 1],
+//                   blockhash_bytes);
+		load_block(&instance->memory[l * 2 + 1],
+			blockhash_bytes);
     }
     clear_internal_memory(blockhash_bytes, ARGON2_BLOCK_SIZE);
 
