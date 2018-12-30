@@ -26,6 +26,7 @@ void get_tree(int thr_id, uint8_t* d);
 static bool init[MAX_GPUS] = { 0 };
 static __thread uint32_t throughput = 0;
 static uint32_t JobId[MAX_GPUS] = {0};
+static uint64_t XtraNonce2[MAX_GPUS] = {0};
 static bool fillGpu[MAX_GPUS] = {false};
 static  MerkleTree::Elements TheElements;
 static  MerkleTree ordered_tree[MAX_GPUS];
@@ -38,7 +39,7 @@ static argon2_instance_t instance[MAX_GPUS];
 
 static std::vector<uint8_t*> MEM[MAX_GPUS];
 
-extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp)
+extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp, struct stratum_ctx *sctx)
 {
 
 	unsigned char mtpHashValue[32];
@@ -146,9 +147,9 @@ printf("memory filled \n");
 pthread_mutex_unlock(&work_lock);
 */
 
-if (JobId[thr_id] != work->data[17]) {
-
-	gpulog(LOG_WARNING, thr_id, "filling memory");
+if (JobId[thr_id] != work->data[17] || XtraNonce2[thr_id] != ((uint64_t*)work->xnonce2)[0]) {
+//	printf("thr_id %d xnonce2 %llx\n",thr_id, ((uint64_t*)work->xnonce2)[0]);
+//	gpulog(LOG_WARNING, thr_id, "filling memory");
 	//restart_threads();
 	//pthread_barrier_wait(&barrier);
 	if (JobId[thr_id] != 0)
@@ -188,7 +189,7 @@ if (JobId[thr_id] != work->data[17]) {
 
 	//for(;;);
 	JobId[thr_id] = work->data[17];
-
+	XtraNonce2[thr_id] = ((uint64_t*)work->xnonce2)[0];
 	MerkleTree::Buffer root = ordered_tree[thr_id].getRoot();
 	//for(;;);
 	std::copy(root.begin(), root.end(), TheMerkleRoot[thr_id]);
@@ -197,7 +198,7 @@ if (JobId[thr_id] != work->data[17]) {
 	//	mtp_setBlockTarget(0,endiandata,ptarget,&TheMerkleRoot);
 	mtp_setBlockTarget(thr_id, endiandata, ptarget, &TheMerkleRoot[thr_id]);
 
-	gpulog(LOG_WARNING, thr_id, "memory filled %d chunks", MEM[thr_id].size());
+//	gpulog(LOG_WARNING, thr_id, "memory filled %d chunks", MEM[thr_id].size());
 }
 
 
@@ -284,13 +285,13 @@ fillGpu[thr_id]=false;
 */
 		pdata[19] += throughput;
 		if (pdata[19] >= real_maxnonce) {
-			gpulog(LOG_WARNING, thr_id, "OUT OF NONCE %x >= %x", pdata[19], real_maxnonce);
-			abort();
+			gpulog(LOG_WARNING, thr_id, "OUT OF NONCE %x >= %x incrementing extra nonce at next chance", pdata[19], real_maxnonce);
+			sctx->job.IncXtra = true;
 		}
 //	}   while (!work_restart[thr_id].restart && pdata[19]<real_maxnonce && JobId==work->data[17] /*&& pdata[19]<(first_nonce+128*throughput)*/);
 
 TheEnd:
-
+//		sctx->job.IncXtra = true;
 	*hashes_done = pdata[19] - first_nonce;
 
 

@@ -292,7 +292,7 @@ void sha256d(unsigned char *hash, const unsigned char *data, int len);
 #define HAVE_SHA256_8WAY 0
 
 struct work;
-extern int scanhash_mtp(int nthreads, int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp);
+extern int scanhash_mtp(int nthreads, int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp, struct stratum_ctx *sctx);
 extern int scanhash_blake256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, int8_t blakerounds);
 extern int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
@@ -636,6 +636,7 @@ struct stratum_job {
 	unsigned char ntime[4];
 	unsigned char claim[32]; // lbry
 	bool clean;
+	bool IncXtra;
 	unsigned char nreward[2];
 	uint32_t height;
 	double diff;

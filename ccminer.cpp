@@ -2564,6 +2564,18 @@ static bool stratum_gen_work_m7(struct stratum_ctx *sctx, struct work *work)
 return true;
 }
 
+static bool increment_X2(struct work *work)
+{
+	int i;
+	pthread_mutex_lock(&stratum_work_lock);
+	//	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
+	for (i = 0; i < (int)work->xnonce2_len && !++work->xnonce2[i]; i++);
+
+	printf("to be transfered %llx \n", ((uint64_t*)work->xnonce2)[0]);
+	pthread_mutex_unlock(&stratum_work_lock);
+	return true;
+}
+
 static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 {
 	uchar merkle_root[64] = { 0 };
@@ -2576,11 +2588,21 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	pthread_mutex_lock(&stratum_work_lock);
 
+
+//		printf("stratumgen \n");
+
 	// store the job ntime as high part of jobid
 //	free(work->job_id);
 //	work->job_id = strdup(sctx->job.job_id);
 //	for (int i=0;i<4;i++)
 //	work->job_iduc[i] = sctx->job.ucjob_id[i];
+/* Increment extranonce2 */
+	if (sctx->job.IncXtra) {
+	printf("incrementing nonce\n");
+	for (i = 0; i < (int)sctx->xnonce2_size && !++sctx->job.xnonce2[i]; i++);
+	sctx->job.IncXtra = false;
+	}
+
 
 	snprintf(work->job_id, sizeof(work->job_id), "%07x %s",
 		be32dec(sctx->job.ntime) & 0xfffffff, sctx->job.job_id);
@@ -2589,6 +2611,14 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 //	printf("thefull job id %s\n",work->job_id);
 //	printf("reduced job id %s\n", work->job_id+8);
+	unsigned char* Transfer = (unsigned char*)malloc(sctx->job.coinbase_size);
+
+	if (opt_algo == ALGO_MTP) {
+		memcpy(Transfer, sctx->job.coinbase, sctx->job.coinbase_size);
+		memcpy(Transfer + 60, work->xnonce2, 8);
+	}
+
+
 
 	// also store the block number
 	work->height = sctx->job.height;
@@ -2626,6 +2656,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	}
 	
 	/* Increment extranonce2 */
+//printf("incrementing nonce\n");
 //	for (i = 0; i < (int)sctx->xnonce2_size && !++sctx->job.xnonce2[i]; i++);
 
 	/* Assemble block header */
@@ -2846,7 +2877,7 @@ static void *miner_thread(void *userdata)
 	struct work work;
 	uint64_t loopcnt = 0;
 	uint32_t max_nonce;
-	uint32_t end_nonce = UINT32_MAX / opt_n_threads * (thr_id + 1) - (thr_id + 1);
+	uint32_t end_nonce = UINT32_MAX / opt_n_threads * (thr_id + 1) ;
 	time_t tm_rate_log = 0;
 	bool work_done = false;
 	bool extrajob = false;
@@ -2969,12 +3000,17 @@ static void *miner_thread(void *userdata)
 			extrajob |= work_done;
 
 			regen = (nonceptr[0] >= end_nonce);
+
+
+
 			if (opt_algo == ALGO_SIA) {
 				regen = ((nonceptr[1] & 0xFF00) >= 0xF000);
 			}
 			regen = regen || extrajob;
 
-			if (regen || opt_algo == ALGO_MTP) {
+			if (regen) {
+				
+
 				work_done = false;
 				extrajob = false;
 			if (opt_algo == ALGO_M7) {
@@ -3295,8 +3331,8 @@ static void *miner_thread(void *userdata)
 
 		work.scanned_from = start_nonce;
 
-		gpulog(LOG_DEBUG, thr_id, "start=%08x end=%08x range=%08x",
-			start_nonce, max_nonce, (max_nonce-start_nonce));
+//		gpulog(LOG_DEBUG, thr_id, "start=%08x end=%08x range=%08x",
+//			start_nonce, max_nonce, (max_nonce-start_nonce));
 
 		if (opt_led_mode == LED_MODE_MINING)
 			gpu_led_on(dev_id);
@@ -3382,7 +3418,10 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_qubit(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_MTP:
-			rc = scanhash_mtp(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, mtp);
+			rc = scanhash_mtp(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, mtp,&stratum);
+//			pthread_mutex_lock(&stratum_work_lock);
+//			stratum.job.IncXtra = true;
+//			pthread_mutex_unlock(&stratum_work_lock);
 			break;
 		case ALGO_LYRA2:
 			rc = scanhash_lyra2(thr_id, &work, max_nonce, &hashes_done);

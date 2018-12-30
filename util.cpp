@@ -2489,8 +2489,15 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	sctx->job.xnonce2 = sctx->job.coinbase + coinb1_size + sctx->xnonce1_size;
 	memcpy(sctx->job.coinbase, coinb1, coinb1_size);
 	memcpy(sctx->job.coinbase + coinb1_size, sctx->xnonce1, sctx->xnonce1_size);
-	if (!sctx->job.job_id /*|| sctx->job.job_id!=job_id*/)
+
+//
+	char* JobID = (char*)malloc(2 * job_idsize + 1);
+	JobID = abin2hex(job_id, job_idsize);
+
+	if (!sctx->job.job_id || strcmp(sctx->job.job_id,JobID) ){
 		memset(sctx->job.xnonce2, 0, sctx->xnonce2_size);
+		sctx->job.IncXtra = false;
+	}
 	//	memset(sctx->job.xnonce2, 1, 1);
 	memcpy(sctx->job.xnonce2 + sctx->xnonce2_size, coinb2, coinb2_size);
 
@@ -2500,7 +2507,7 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	//	sctx->job.job_id = job_id;
 	sctx->job.job_id = (char*)malloc(2 * job_idsize + 1);
 	sctx->job.job_id = abin2hex(job_id, job_idsize);
-
+	free(JobID);
 	memcpy(sctx->job.prevhash, prevhash, 32);
 
 /*
