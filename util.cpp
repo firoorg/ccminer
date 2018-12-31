@@ -2424,6 +2424,7 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	bool has_claim, has_roots;
 	json_t *merkle_arr;
 	uchar **merkle;
+	char* JobID = (char*)malloc(2 * job_idsize + 1);
 
 	get_currentalgo(algo, sizeof(algo));
 /*
@@ -2491,7 +2492,7 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	memcpy(sctx->job.coinbase + coinb1_size, sctx->xnonce1, sctx->xnonce1_size);
 
 //
-	char* JobID = (char*)malloc(2 * job_idsize + 1);
+
 	JobID = abin2hex(job_id, job_idsize);
 
 	if (!sctx->job.job_id || strcmp(sctx->job.job_id,JobID) ){
