@@ -4927,7 +4927,7 @@ int main(int argc, char *argv[])
 	struct thr_info *thr;
 	long flags;
 	int i;
-	
+	 
 	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by djm34 ***\n");
 #ifdef _MSC_VER
 	printf("    Built with VC++ %d and nVidia CUDA SDK %d.%d\n\n", msver(),
