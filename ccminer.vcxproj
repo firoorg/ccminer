@@ -203,14 +203,14 @@
     <CudaCompile>
       <CInterleavedPTX>false</CInterleavedPTX>
       <MaxRegCount>80</MaxRegCount>
-      <PtxAsOptionV>false</PtxAsOptionV>
+      <PtxAsOptionV>true</PtxAsOptionV>
       <Keep>true</Keep>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <Include>$(NVTOOLSEXT_PATH)\include;..\..\..\Common\C99</Include>
       <Optimization>O3</Optimization>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <InterleaveSourceInPTX>false</InterleaveSourceInPTX>
-      <GenerateLineInfo>false</GenerateLineInfo>
+      <InterleaveSourceInPTX>true</InterleaveSourceInPTX>
+      <GenerateLineInfo>true</GenerateLineInfo>
     </CudaCompile>
     <CudaLink>
       <Optimization>O3</Optimization>

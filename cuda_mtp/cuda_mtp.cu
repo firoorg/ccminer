@@ -16,8 +16,8 @@ __constant__ uint32_t pTarget[8];
 __constant__ uint32_t pData[20]; // truncated data
 __constant__ uint4 Elements[1];
 uint4 * HBlock[16];
-__device__ uint32_t *Header[16];
-__device__ uint2 *buffer_a[16];
+/*__device__*/ uint32_t *Header[16];
+/*__device__*/ uint2 *buffer_a[16];
 
 #define ARGON2_SYNC_POINTS 4
 #define argon_outlen 32
@@ -468,10 +468,10 @@ __device__ __forceinline__ static int blake2b_compress2c_256(uint64_t *hash, con
 
 
 
-__device__ __forceinline__ static int blake2b_compress2b(uint64_t *hash, const uint64_t *hzcash, const uint64_t block[16], const uint32_t len, int last)
+__device__ __forceinline__ static int blake2b_compress2b(uint64_t *hzcash, const uint64_t * __restrict__ m, const uint32_t len, int last)
 {
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
-	uint64_t m[16];
+
+//	uint64_t m[16];
 	uint64_t v[16];
 
 	const uint64_t blakeIV_[8] = {
@@ -484,13 +484,12 @@ __device__ __forceinline__ static int blake2b_compress2b(uint64_t *hash, const u
 		0x1f83d9abfb41bd6bULL,
 		0x5be0cd19137e2179ULL
 	};
-
+/*
 #pragma unroll
 	for (int i = 0; i < 16; ++i)
 		m[i] = block[i];
-
+*/
 #pragma unroll
-
 	for (int i = 0; i < 8; ++i)
 		v[i] = hzcash[i];
 
@@ -577,8 +576,8 @@ __device__ __forceinline__ static int blake2b_compress2b(uint64_t *hash, const u
 	ROUND(8);
 	ROUND(9);
 	ROUND(10);
-	//	ROUND(11);
-	ROUNDF;
+		ROUND(11);
+//	ROUNDF;
 	/*
 	ROUND0;
 	ROUND1;
@@ -595,7 +594,7 @@ __device__ __forceinline__ static int blake2b_compress2b(uint64_t *hash, const u
 	*/
 
 	for (int i = 0; i < 8; ++i)
-		hash[i] = hzcash[i] ^ v[i] ^ v[i + 8];
+		hzcash[i] ^= v[i] ^ v[i + 8];
 
 #undef G
 #undef ROUND
@@ -620,7 +619,7 @@ __device__ __forceinline__ void prefetchu(void* addr)
 	asm volatile("prefetchu.L1 [%0];" : : "l"(addr));
 }
 
-#define TPB_MTP 256
+#define TPB_MTP 320
 
 __forceinline__ __device__ unsigned lane_id()
 {
@@ -647,32 +646,34 @@ __device__ __forceinline__ uint32_t load32(uint32_t * const addr)
 }
 
 
-#define FARLOAD(x) far[warp][(x)*(32+SHR_OFF) + lane]
-#define FARSTORE(x) far[warp][lane*(32+SHR_OFF) + (x)]
-#define SHR_OFF 2
+#define FARLOAD(x) far[warp][(x)*(8+SHR_OFF) + lane]
+#define FARSTORE(x) far[warp][lane*(8+SHR_OFF) + (x)]
+#define SHR_OFF 1
 
 
 __global__ __launch_bounds__(TPB_MTP, 1)
 void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const uint4  * __restrict__ DBlock,
 	uint32_t * __restrict__ SmallestNonce)
 {
-	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	unsigned mask = __activemask();
+//	mask = 0xffffffff;
+//	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	uint32_t NonceNumber = 1;  // old
 	uint32_t ThreadNumber = 1;
-	uint32_t event_thread = thread / ThreadNumber;
+	uint32_t event_thread = (blockDim.x * blockIdx.x + threadIdx.x); //thread / ThreadNumber;
 	uint32_t NonceIterator = startNounce + event_thread;
-	int lane = lane_id();
-	int warp = threadIdx.x / 32;;//warp_id();
-	__shared__ uint32_t far[TPB_MTP / 32][32 * (32 + SHR_OFF)];
-
+	int lane = lane_id()%8;
+	int warp = threadIdx.x / 8;;//warp_id();
+	__shared__ __align__(128) ulonglong2 far[TPB_MTP / 8][8 * (8 + SHR_OFF)];
+	__shared__ __align__(32) uint32_t farIndex[TPB_MTP / 8][8];
 
 	if (event_thread < threads)
 	{
 
-		const uint4 *	 __restrict__ GBlock = &DBlock[0];
+		const ulonglong2 *	 __restrict__ GBlock = &((ulonglong2*)DBlock)[0];
 		uint8 YLocal;
 
-		uint16 DataChunk[2] = { 0 };
+		ulong8 DataChunk[2] = { 0 };
 		/*
 		((uint4*)DataChunk)[0] = ((uint4*)pData)[0];
 		((uint4*)DataChunk)[1] = ((uint4*)pData)[1];
@@ -689,7 +690,7 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 		((uint4*)DataChunk)[4] = ((uint4*)pData)[4];
 		((uint4*)DataChunk)[5] = ((uint4*)Elements)[0];
 
-		DataChunk[1].hi.s0 = NonceIterator;
+		((uint16*)DataChunk)[1].hi.s0 = NonceIterator;
 
 		blake2b_compress2_256((uint64_t*)&YLocal, (uint64_t*)blakeFinal, (uint64_t*)DataChunk, 100);
 
@@ -706,39 +707,34 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 
 			//				localIndex = YLocal.s0%(argon_memcost);
 			//				localIndex = YLocal.s0 & 0x3FFFFF;
-			uint32_t farIndex[32];
-			uint32_t farStore[32];
+//			uint64_t farIndex[8];
 
 
-			for (int t = 0; t<8; t++) {
-				uint32_t *D = (uint32_t*)&YLocal;
-				FARLOAD(t + 24) = D[t];
+			#pragma unroll
+			for (int t = 0; t<2; t++) {
+				ulonglong2 *D = (ulonglong2*)&YLocal;
+				FARLOAD(t + 6) = D[t];
+				
 			}
-			__syncwarp();
-#pragma unroll
-			for (int t = 0; t<32; t++) {
-				farIndex[t] = far[warp][(24)*(32 + SHR_OFF) + t] & 0x3FFFFF;
-			}
+				farIndex[warp][lane] = YLocal.s0 & 0x3FFFFF;
+			__syncwarp(mask);
 
-
-
-
-			uint16 DataChunk[2];
+			ulong8 DataChunk[2];
 			uint32_t len = 0;
 
 			uint16 DataTmp; uint2 * blake_init = (uint2*)&DataTmp;
 			for (int i = 0; i<8; i++)blake_init[i] = blakeFinal[i];
 
-			uint8 part;
+//			uint8 part;
 
 
-#pragma unroll 1
+			#pragma unroll 1
 			for (int i = 0; i < 9; i++) {
 				int last = (i == 8);
-#pragma unroll
-				for (int t = 0; t<8; t++) {
-					uint32_t *D = (uint32_t*)&part;
-					D[t] = FARLOAD(t + 24);
+				#pragma unroll
+				for (int t = 0; t<2; t++) {
+					ulonglong2 *D = (ulonglong2*)&YLocal;
+					D[t] = FARLOAD(t + 6);
 				}
 
 
@@ -748,25 +744,27 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 				{
 
 
-#pragma unroll
-					for (int t = 0; t<32; t++) {
-						uint32_t *farP = (uint32_t*)&((uint8*)GBlock)[farIndex[t] * 32 + 0 + 4 * i + 0];
-						FARSTORE(t) = (last) ? 0 : farP[lane];
+					#pragma unroll 
+					for (int t = 0; t<8; t++) {
+						
+						ulonglong2 *farP = (ulonglong2*)&GBlock[farIndex[warp][t] * 64 + 0 + 8 * i + 0];
+
+						far[warp][lane*(8 + SHR_OFF) + (t)] = (last) ? make_ulonglong2(0,0) : farP[lane];
 					}
 
-					__syncwarp();
+					__syncwarp(mask);
 				}
 
-#pragma unroll
-				for (int t = 0; t<24; t++) {
-					uint32_t *D = (uint32_t*)DataChunk;
-					D[t + 8] = (FARLOAD(t));
+				#pragma unroll
+				for (int t = 0; t<6; t++) {
+					ulonglong2 *D = (ulonglong2*)DataChunk;
+					D[t + 2] = (FARLOAD(t));
 				}
-				DataChunk[0].lo = part;
+				((uint16*)DataChunk)[0].lo = YLocal;
 
-				uint16 DataTmp2;
-				blake2b_compress2b((uint64_t*)&DataTmp2, (uint64_t*)&DataTmp, (uint64_t*)DataChunk, len, last);
-				DataTmp = DataTmp2;
+			//	uint16 DataTmp2;
+				blake2b_compress2b(/*(uint64_t*)&DataTmp2,*/ (uint64_t*)&DataTmp, (uint64_t*)DataChunk, len, last);
+			//	DataTmp = DataTmp2;
 
 
 			}
