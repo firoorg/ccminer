@@ -1,9 +1,9 @@
 /**
- * MTP 
- * djm34 2017-2018
- * krnlx 2018
- **/
- 
+* MTP
+* djm34 2017-2018
+* krnlx 2018
+**/
+
 #include <stdio.h>
 #include <memory.h>
 
@@ -471,7 +471,7 @@ __device__ __forceinline__ static int blake2b_compress2c_256(uint64_t *hash, con
 __device__ __forceinline__ static int blake2b_compress2b(uint64_t *hzcash, const uint64_t * __restrict__ m, const uint32_t len, int last)
 {
 
-//	uint64_t m[16];
+	//	uint64_t m[16];
 	uint64_t v[16];
 
 	const uint64_t blakeIV_[8] = {
@@ -484,11 +484,11 @@ __device__ __forceinline__ static int blake2b_compress2b(uint64_t *hzcash, const
 		0x1f83d9abfb41bd6bULL,
 		0x5be0cd19137e2179ULL
 	};
-/*
-#pragma unroll
+	/*
+	#pragma unroll
 	for (int i = 0; i < 16; ++i)
-		m[i] = block[i];
-*/
+	m[i] = block[i];
+	*/
 #pragma unroll
 	for (int i = 0; i < 8; ++i)
 		v[i] = hzcash[i];
@@ -576,8 +576,8 @@ __device__ __forceinline__ static int blake2b_compress2b(uint64_t *hzcash, const
 	ROUND(8);
 	ROUND(9);
 	ROUND(10);
-		ROUND(11);
-//	ROUNDF;
+	ROUND(11);
+	//	ROUNDF;
 	/*
 	ROUND0;
 	ROUND1;
@@ -656,13 +656,13 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 	uint32_t * __restrict__ SmallestNonce)
 {
 	unsigned mask = __activemask();
-//	mask = 0xffffffff;
-//	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	//	mask = 0xffffffff;
+	//	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	uint32_t NonceNumber = 1;  // old
 	uint32_t ThreadNumber = 1;
 	uint32_t event_thread = (blockDim.x * blockIdx.x + threadIdx.x); //thread / ThreadNumber;
 	uint32_t NonceIterator = startNounce + event_thread;
-	int lane = lane_id()%8;
+	int lane = lane_id() % 8;
 	int warp = threadIdx.x / 8;;//warp_id();
 	__shared__ __align__(128) ulonglong2 far[TPB_MTP / 8][8 * (8 + SHR_OFF)];
 	__shared__ __align__(32) uint32_t farIndex[TPB_MTP / 8][8];
@@ -707,16 +707,16 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 
 			//				localIndex = YLocal.s0%(argon_memcost);
 			//				localIndex = YLocal.s0 & 0x3FFFFF;
-//			uint64_t farIndex[8];
+			//			uint64_t farIndex[8];
 
 
-			#pragma unroll
+#pragma unroll
 			for (int t = 0; t<2; t++) {
 				ulonglong2 *D = (ulonglong2*)&YLocal;
 				FARLOAD(t + 6) = D[t];
-				
+
 			}
-				farIndex[warp][lane] = YLocal.s0 & 0x3FFFFF;
+			farIndex[warp][lane] = YLocal.s0 & 0x3FFFFF;
 			__syncwarp(mask);
 
 			ulong8 DataChunk[2];
@@ -725,13 +725,13 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 			uint16 DataTmp; uint2 * blake_init = (uint2*)&DataTmp;
 			for (int i = 0; i<8; i++)blake_init[i] = blakeFinal[i];
 
-//			uint8 part;
+			//			uint8 part;
 
 
-			#pragma unroll 1
+#pragma unroll 1
 			for (int i = 0; i < 9; i++) {
 				int last = (i == 8);
-				#pragma unroll
+#pragma unroll
 				for (int t = 0; t<2; t++) {
 					ulonglong2 *D = (ulonglong2*)&YLocal;
 					D[t] = FARLOAD(t + 6);
@@ -744,27 +744,27 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 				{
 
 
-					#pragma unroll 
+#pragma unroll 
 					for (int t = 0; t<8; t++) {
-						
+
 						ulonglong2 *farP = (ulonglong2*)&GBlock[farIndex[warp][t] * 64 + 0 + 8 * i + 0];
 
-						far[warp][lane*(8 + SHR_OFF) + (t)] = (last) ? make_ulonglong2(0,0) : farP[lane];
+						far[warp][lane*(8 + SHR_OFF) + (t)] = (last) ? make_ulonglong2(0, 0) : farP[lane];
 					}
 
 					__syncwarp(mask);
 				}
 
-				#pragma unroll
+#pragma unroll
 				for (int t = 0; t<6; t++) {
 					ulonglong2 *D = (ulonglong2*)DataChunk;
 					D[t + 2] = (FARLOAD(t));
 				}
 				((uint16*)DataChunk)[0].lo = YLocal;
 
-			//	uint16 DataTmp2;
+				//	uint16 DataTmp2;
 				blake2b_compress2b(/*(uint64_t*)&DataTmp2,*/ (uint64_t*)&DataTmp, (uint64_t*)DataChunk, len, last);
-			//	DataTmp = DataTmp2;
+				//	DataTmp = DataTmp2;
 
 
 			}
@@ -1406,6 +1406,17 @@ __global__ void mtp_fc(uint32_t threads, uint4  *  DBlock, uint2 *a) {
 __host__ void get_tree(int thr_id, uint8_t* d) {
 	cudaMemcpy(d, buffer_a[thr_id], sizeof(uint2) * 2 * 1048576 * 4, cudaMemcpyDeviceToHost);
 }
+
+
+__host__ uint8_t* get_tree2(int thr_id) {
+	uint8_t *d;
+	cudaMallocHost(&d, sizeof(uint2) * 2 * 1048576 * 4);
+	cudaMemcpy(d, buffer_a[thr_id], sizeof(uint2) * 2 * 1048576 * 4, cudaMemcpyDeviceToHost);
+	return d;
+}
+
+
+
 
 __host__ void get_block(int thr_id, void* d, uint32_t index) {
 	cudaMemcpy(d, &HBlock[thr_id][64 * index], sizeof(uint64_t) * 128, cudaMemcpyDeviceToHost);

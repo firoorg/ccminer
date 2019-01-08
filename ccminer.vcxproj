@@ -207,7 +207,7 @@
       <Keep>true</Keep>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <Include>$(NVTOOLSEXT_PATH)\include;..\..\..\Common\C99</Include>
-      <Optimization>O3</Optimization>
+      <Optimization>O2</Optimization>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <InterleaveSourceInPTX>true</InterleaveSourceInPTX>
       <GenerateLineInfo>true</GenerateLineInfo>
