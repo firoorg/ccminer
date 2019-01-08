@@ -706,37 +706,37 @@ int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 			//			copy_blockS(&nBlockMTP[j * 2 - 1], &instance->memory[ref_index]);
 			get_block(thr_id, &nBlockMTP[j * 2 - 1], ref_index);
 			block blockhash;
-	//		uint8_t blockhash_bytes[ARGON2_BLOCK_SIZE];
+			uint8_t blockhash_bytes[ARGON2_BLOCK_SIZE];
 			//			copy_block(&blockhash, &instance->memory[ij]);
 			get_block(thr_id, &blockhash, ij);
 
 
-	//		store_block(&blockhash_bytes, &blockhash);
+			store_block(&blockhash_bytes, &blockhash);
 
 			ablake2b_state BlakeHash2;
 			ablake2b_init(&BlakeHash2, 32);
 			ablake2b_update(&BlakeHash2, &Y[j - 1], sizeof(uint256));
-			ablake2b_update(&BlakeHash2, blockhash.v, ARGON2_BLOCK_SIZE);
+			ablake2b_update(&BlakeHash2, blockhash_bytes, ARGON2_BLOCK_SIZE);
 			ablake2b_final(&BlakeHash2, (unsigned char*)&Y[j], 32);
 			////////////////////////////////////////////////////////////////
 			// current block
-//			clear_internal_memory(blockhash.v, ARGON2_BLOCK_SIZE);
-//			clear_internal_memory(blockhash_bytes, ARGON2_BLOCK_SIZE);
+			clear_internal_memory(blockhash.v, ARGON2_BLOCK_SIZE);
+			clear_internal_memory(blockhash_bytes, ARGON2_BLOCK_SIZE);
 
 			unsigned char curr[32] = { 0 };
 			block blockhash_curr;
-//			uint8_t blockhash_curr_bytes[ARGON2_BLOCK_SIZE];
+			uint8_t blockhash_curr_bytes[ARGON2_BLOCK_SIZE];
 			//			copy_block(&blockhash_curr, &instance->memory[ij]);
 			get_block(thr_id, &blockhash_curr, ij);
-//			store_block(&blockhash_curr_bytes, &blockhash_curr);
+			store_block(&blockhash_curr_bytes, &blockhash_curr);
 			ablake2b_state state_curr;
 			ablake2b_init(&state_curr, MERKLE_TREE_ELEMENT_SIZE_B);
-			ablake2b4rounds_update(&state_curr, blockhash_curr.v, ARGON2_BLOCK_SIZE);
+			ablake2b4rounds_update(&state_curr, blockhash_curr_bytes, ARGON2_BLOCK_SIZE);
 			uint8_t digest_curr[MERKLE_TREE_ELEMENT_SIZE_B];
 			ablake2b4rounds_final(&state_curr, digest_curr, sizeof(digest_curr));
 			MerkleTree::Buffer hash_curr = MerkleTree::Buffer(digest_curr, digest_curr + sizeof(digest_curr));
-//			clear_internal_memory(blockhash_curr.v, ARGON2_BLOCK_SIZE);
-//			clear_internal_memory(blockhash_curr_bytes, ARGON2_BLOCK_SIZE);
+			clear_internal_memory(blockhash_curr.v, ARGON2_BLOCK_SIZE);
+			clear_internal_memory(blockhash_curr_bytes, ARGON2_BLOCK_SIZE);
 
 
 			std::deque<std::vector<uint8_t>> zProofMTP = TheTree.getProofOrdered(hash_curr, ij + 1);
@@ -752,13 +752,13 @@ int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 			//prev proof
 			unsigned char prev[32] = { 0 };
 			block blockhash_prev;
-//			uint8_t blockhash_prev_bytes[ARGON2_BLOCK_SIZE];
+			uint8_t blockhash_prev_bytes[ARGON2_BLOCK_SIZE];
 			//			copy_block(&blockhash_prev, &instance->memory[prev_index]);
 			get_block(thr_id, &blockhash_prev, prev_index);
-//			store_block(&blockhash_prev_bytes, &blockhash_prev);
+			store_block(&blockhash_prev_bytes, &blockhash_prev);
 			ablake2b_state state_prev;
 			ablake2b_init(&state_prev, MERKLE_TREE_ELEMENT_SIZE_B);
-			ablake2b4rounds_update(&state_prev, blockhash_prev.v, ARGON2_BLOCK_SIZE);
+			ablake2b4rounds_update(&state_prev, blockhash_prev_bytes, ARGON2_BLOCK_SIZE);
 			uint8_t digest_prev[MERKLE_TREE_ELEMENT_SIZE_B];
 
 
@@ -766,8 +766,8 @@ int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 
 
 			MerkleTree::Buffer hash_prev = MerkleTree::Buffer(digest_prev, digest_prev + sizeof(digest_prev));
-//			clear_internal_memory(blockhash_prev.v, ARGON2_BLOCK_SIZE);
-//			clear_internal_memory(blockhash_prev_bytes, ARGON2_BLOCK_SIZE);
+			clear_internal_memory(blockhash_prev.v, ARGON2_BLOCK_SIZE);
+			clear_internal_memory(blockhash_prev_bytes, ARGON2_BLOCK_SIZE);
 
 			std::deque<std::vector<uint8_t>> zProofMTP2 = TheTree.getProofOrdered(hash_prev, prev_index + 1);
 
@@ -783,18 +783,18 @@ int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 			//ref proof
 			unsigned char ref[32] = { 0 };
 			block blockhash_ref;
-//			uint8_t blockhash_ref_bytes[ARGON2_BLOCK_SIZE];
+			uint8_t blockhash_ref_bytes[ARGON2_BLOCK_SIZE];
 			//			copy_block(&blockhash_ref, &instance->memory[ref_index]);
 			get_block(thr_id, &blockhash_ref, ref_index);
-//			store_block(&blockhash_ref_bytes, &blockhash_ref);
+			store_block(&blockhash_ref_bytes, &blockhash_ref);
 			ablake2b_state state_ref;
 			ablake2b_init(&state_ref, MERKLE_TREE_ELEMENT_SIZE_B);
-			ablake2b4rounds_update(&state_ref, blockhash_ref.v, ARGON2_BLOCK_SIZE);
+			ablake2b4rounds_update(&state_ref, blockhash_ref_bytes, ARGON2_BLOCK_SIZE);
 			uint8_t digest_ref[MERKLE_TREE_ELEMENT_SIZE_B];
 			ablake2b4rounds_final(&state_ref, digest_ref, sizeof(digest_ref));
 			MerkleTree::Buffer hash_ref = MerkleTree::Buffer(digest_ref, digest_ref + sizeof(digest_ref));
-//			clear_internal_memory(blockhash_ref.v, ARGON2_BLOCK_SIZE);
-//			clear_internal_memory(blockhash_ref_bytes, ARGON2_BLOCK_SIZE);
+			clear_internal_memory(blockhash_ref.v, ARGON2_BLOCK_SIZE);
+			clear_internal_memory(blockhash_ref_bytes, ARGON2_BLOCK_SIZE);
 
 			std::deque<std::vector<uint8_t>> zProofMTP3 = TheTree.getProofOrdered(hash_ref, ref_index + 1);
 

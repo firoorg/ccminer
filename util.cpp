@@ -1203,8 +1203,10 @@ static void stratum_buffer_append_bos(struct stratum_ctx *sctx, const char *s,si
 
 	if (snew >= sctx->sockbuf_size) {
 		sctx->sockbuf_size = snew + (RBUFSIZE - (snew % RBUFSIZE));
-		sctx->sockbuf = (char*)realloc(sctx->sockbuf, sctx->sockbuf_size);
 	}
+//		sctx->sockbuf = (char*)realloc(sctx->sockbuf, sctx->sockbuf_size);
+		sctx->sockbuf = (char*)realloc(sctx->sockbuf, sctx->sockbuf_bossize + size_mess);
+//	}
 
 	memcpy(sctx->sockbuf + sctx->sockbuf_bossize , s,size_mess);
 	sctx->sockbuf_bossize += size_mess; 
@@ -1320,6 +1322,7 @@ json_t* recode_message(json_t *MyObject2)
 
 						json_array_append(json_arr, json_string(strval));
 						free(strval);
+						free(zbyte);
 					}
 				}
 				else {
@@ -1351,6 +1354,7 @@ json_t* recode_message(json_t *MyObject2)
 
 								json_array_append(json_arr2, json_string(strval));
 								free(strval);
+								free(zbyte);
 							}
 						}
 						else {
@@ -2411,17 +2415,20 @@ out:
 
 static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 {
-
+//printf("***************stratum notify ****************************\n");
+//stratum_free_job(sctx);
+//sleep(15);
+//sleep(30);
 	char algo[64] = { 0 };
-	const uchar *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *ntime;
+ uchar *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *ntime;
 	const uchar *extradata = NULL;
 	size_t coinb1_size, coinb2_size, job_idsize;
 	bool clean, ret = false;
 	int merkle_count, i, p = 0;
 	bool has_claim, has_roots;
 	json_t *merkle_arr;
-	uchar **merkle;
-	char* JobID = (char*)malloc(2 * job_idsize + 1);
+//	uchar **merkle;
+
 
 	get_currentalgo(algo, sizeof(algo));
 /*
@@ -2430,17 +2437,17 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 */
 //	printf("before merkle count\n");
 	job_idsize = json_bytes_size(json_array_get(params, p));
-
-	job_id = (const uchar*)json_bytes_value(json_array_get(params, p++));
+	char* JobID = (char*)malloc(2 * job_idsize + 1);
+	job_id = ( uchar*)json_bytes_value(json_array_get(params, p++));
 
 //	memcpy(sctx->job.ucjob_id, job_id, job_idsize);
 //	printf("before merkle count job_idsize %d %08x\n",job_idsize,((uint32_t*)job_id)[0]);
-	prevhash = (const uchar*)json_bytes_value(json_array_get(params, p++));
+	prevhash = ( uchar*)json_bytes_value(json_array_get(params, p++));
 
-	coinb1 = (const uchar*)json_bytes_value(json_array_get(params, p));
+	coinb1 = ( uchar*)json_bytes_value(json_array_get(params, p));
 	coinb1_size = json_bytes_size(json_array_get(params, p++));
 
-	coinb2 = (const uchar*)json_bytes_value(json_array_get(params, p));
+	coinb2 = ( uchar*)json_bytes_value(json_array_get(params, p));
 	coinb2_size = json_bytes_size(json_array_get(params, p++));
 
 	merkle_arr = json_array_get(params, p++);
@@ -2449,11 +2456,11 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 
 
 	merkle_count = (int)json_array_size(merkle_arr);
-	version = (const uchar*)json_bytes_value(json_array_get(params, p++));
+	version = ( uchar*)json_bytes_value(json_array_get(params, p++));
 
-	nbits = (const uchar*)json_bytes_value(json_array_get(params, p++));
+	nbits = ( uchar*)json_bytes_value(json_array_get(params, p++));
 
-	ntime = (const uchar*)json_bytes_value(json_array_get(params, p++));
+	ntime = ( uchar*)json_bytes_value(json_array_get(params, p++));
 
 	clean = json_is_true(json_array_get(params, p));
 
@@ -2463,22 +2470,24 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 		applog(LOG_ERR, "Stratum notify: invalid parameters");
 		goto out;
 	}
+	pthread_mutex_lock(&stratum_work_lock);
 
-	merkle = (uchar**)malloc(merkle_count * sizeof(uchar *));
+	sctx->job.merkle = (uchar**)malloc(merkle_count * sizeof(uchar *));
 	for (i = 0; i < merkle_count; i++) {
-		const uchar  *s = (const uchar*)json_bytes_value(json_array_get(merkle_arr, i));
+		uchar  *s = (uchar*)json_bytes_value(json_array_get(merkle_arr, i));
 		if (!s /*|| strlen(s) != 64*/) {
 			while (i--)
-				free(merkle[i]);
-			free(merkle);
+				free(sctx->job.merkle[i]);
+			free(sctx->job.merkle);
 			applog(LOG_ERR, "Stratum notify: invalid Merkle branch");
 			goto out;
 		}
-		merkle[i] = (uchar*)malloc(32);
-		memcpy(merkle[i], s, 32);
+		sctx->job.merkle[i] = (uchar*)malloc(32);
+		memcpy(sctx->job.merkle[i], s, 32);
+		free(s);
 	}
 
-	pthread_mutex_lock(&stratum_work_lock);
+//orig	
 
 	sctx->job.coinbase_size = coinb1_size + sctx->xnonce1_size +
 		sctx->xnonce2_size + coinb2_size;
@@ -2513,13 +2522,24 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	if (has_roots) memcpy(sctx->job.extra, extradata, 64);
 */
 	sctx->job.height = getblocheight(sctx);
-
+/*
 	for (i = 0; i < sctx->job.merkle_count; i++)
 		free(sctx->job.merkle[i]);
 	free(sctx->job.merkle);
-	sctx->job.merkle = merkle;
+
+		sctx->job.merkle = merkle;
+*/
+/*
+		sctx->job.merkle = (uchar**)malloc(merkle_count * sizeof(uchar *));
+		for (i = 0; i < merkle_count; i++)
+		{
+			sctx->job.merkle[i] = (uchar*)malloc(32);
+			memcpy(sctx->job.merkle[i], merkle[i],32);
+		}
+*/
 	sctx->job.merkle_count = merkle_count;
 	//	sctx->job.version = malloc(sizeof(uint32_t*));
+
 	memcpy(sctx->job.version, version, 8);
 	memcpy(sctx->job.nbits, nbits, 8);
 	memcpy(sctx->job.ntime, ntime, 8);
@@ -2527,12 +2547,23 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	sctx->job.clean = clean;
 
 	sctx->job.diff = sctx->next_diff;
-
+//
 	pthread_mutex_unlock(&stratum_work_lock);
 
 	ret = true;
 
 out:
+//	printf("*************** end stratum notify ****************************\n");
+	free(job_id); free(prevhash); free(coinb1); free(coinb2); free(version); free(nbits); free(ntime);
+	json_decref(merkle_arr);
+
+/*
+	for (i = 0; i < merkle_count; i++) 
+		free(merkle[i]);
+	free(merkle);
+*/	
+
+
 	return ret;
 }
 
@@ -2880,7 +2911,7 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 {
 	json_t *val, *id, *params;
 	json_error_t err;
-	const char *method;
+	/*const*/ char *method;
 	bool ret = false;
 
 	val = JSON_LOADS(s, &err);
@@ -2889,7 +2920,7 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 		goto out;
 	}
 
-	method = json_string_value(json_object_get(val, "method"));
+	method = (char*)json_string_value(json_object_get(val, "method"));
 	if (!method)
 		goto out;
 	id = json_object_get(val, "id");
@@ -2945,7 +2976,12 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 out:
 	if (val)
 		json_decref(val);
+	if (id)
+		json_decref(id);
+	if (params)
+		json_decref(params);
 
+	free(method);
 	return ret;
 }
 

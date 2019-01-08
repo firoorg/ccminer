@@ -15,7 +15,7 @@ static uint32_t *d_MinNonces[16];
 __constant__ uint32_t pTarget[8];
 __constant__ uint32_t pData[20]; // truncated data
 __constant__ uint4 Elements[1];
-uint4 * HBlock[16];
+ uint4 * HBlock[16];
 /*__device__*/ uint32_t *Header[16];
 /*__device__*/ uint2 *buffer_a[16];
 
@@ -1404,6 +1404,7 @@ __global__ void mtp_fc(uint32_t threads, uint4  *  DBlock, uint2 *a) {
 
 
 __host__ void get_tree(int thr_id, uint8_t* d) {
+	cudaSetDevice(device_map[thr_id]);
 	cudaMemcpy(d, buffer_a[thr_id], sizeof(uint2) * 2 * 1048576 * 4, cudaMemcpyDeviceToHost);
 }
 
@@ -1419,11 +1420,12 @@ __host__ uint8_t* get_tree2(int thr_id) {
 
 
 __host__ void get_block(int thr_id, void* d, uint32_t index) {
+	cudaSetDevice(device_map[thr_id]);
 	cudaMemcpy(d, &HBlock[thr_id][64 * index], sizeof(uint64_t) * 128, cudaMemcpyDeviceToHost);
 }
 __host__ void mtp_i_cpu(int thr_id, uint32_t *block_header) {
 
-
+	cudaSetDevice(device_map[thr_id]);
 	cudaError_t err = cudaMemcpy(Header[thr_id], block_header, 8 * sizeof(uint32_t), cudaMemcpyHostToDevice);
 	if (err != cudaSuccess)
 	{

@@ -1,4 +1,4 @@
-AC_INIT([ccminer], [1.1.11-djm34], [], [ccminer], [http://github.com/zcoinofficial/ccminer])
+AC_INIT([ccminer], [1.1.12-djm34], [], [ccminer], [http://github.com/zcoinofficial/ccminer])
 
 AC_PREREQ([2.59c])
 AC_CANONICAL_SYSTEM

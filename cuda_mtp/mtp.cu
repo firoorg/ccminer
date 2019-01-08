@@ -28,8 +28,8 @@ static __thread uint32_t throughput = 0;
 static uint32_t JobId[MAX_GPUS] = {0};
 static uint64_t XtraNonce2[MAX_GPUS] = {0};
 static bool fillGpu[MAX_GPUS] = {false};
-static  MerkleTree::Elements TheElements;
-static  MerkleTree ordered_tree[MAX_GPUS];
+//static  MerkleTree::Elements TheElements;
+static  MerkleTree *ordered_tree[MAX_GPUS];
 static  unsigned char TheMerkleRoot[MAX_GPUS][16];
 static  argon2_context context[MAX_GPUS];
 static argon2_instance_t instance[MAX_GPUS];
@@ -76,7 +76,7 @@ extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t
 		cudaDeviceProp props;
 		cudaGetDeviceProperties(&props, dev_id);
 	
-		cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
+//		cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
 
 
@@ -86,7 +86,10 @@ extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t
 
 
 	}
-
+//sleep(10);
+//cudaFreeHost(dx[thr_id]);
+//printf("freed\n");
+//sleep(60);
 	uint32_t _ALIGN(128) endiandata[20];
 	((uint32_t*)pdata)[19] = (pdata[20]); //*/0x00100000; // mtp version not the actual nonce
 //	((uint32_t*)pdata)[19] = 0x1000;
@@ -149,12 +152,17 @@ pthread_mutex_unlock(&work_lock);
 */
 
 if (JobId[thr_id] != work->data[17] || XtraNonce2[thr_id] != ((uint64_t*)work->xnonce2)[0]) {
- 
-	if (JobId[thr_id] != 0) {
-		free_memory(&context[thr_id], (unsigned char *)instance[thr_id].memory, instance[thr_id].memory_blocks, sizeof(block));
-		ordered_tree[thr_id].Destructor();
-	}
 
+	if (JobId[thr_id] != 0) {
+
+		free_memory(&context[thr_id], (unsigned char *)instance[thr_id].memory, instance[thr_id].memory_blocks, sizeof(block));
+		ordered_tree[thr_id]->Destructor();
+		cudaFreeHost(dx[thr_id]);
+//		ordered_tree[thr_id].Destructor();
+
+		delete  ordered_tree[thr_id];
+	}
+	cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
 	context[thr_id] = init_argon2d_param((const char*)endiandata);
 
 	argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
@@ -165,21 +173,27 @@ if (JobId[thr_id] != work->data[17] || XtraNonce2[thr_id] != ((uint64_t*)work->x
 
 	get_tree(thr_id,dx[thr_id]);
 	printf("Step 2 : Compute the root Φ of the Merkle hash tree \n");
-
-	ordered_tree[thr_id] = MerkleTree(dx[thr_id], true);
-
+//sleep(10);
+	ordered_tree[thr_id] = new MerkleTree(dx[thr_id], true);
+/*
+printf("after ordered tree\n");
+sleep(10);
+printf("delete ordered tree\n");
+ordered_tree[thr_id]->Destructor();
+//delete ordered_tree[thr_id];
+sleep(10);
+printf("deleted ordered tree\n");
+sleep(30);
+*/
 	JobId[thr_id] = work->data[17];
 	XtraNonce2[thr_id] = ((uint64_t*)work->xnonce2)[0];
-	MerkleTree::Buffer root = ordered_tree[thr_id].getRoot();
+	MerkleTree::Buffer root = ordered_tree[thr_id]->getRoot();
 
 	std::copy(root.begin(), root.end(), TheMerkleRoot[thr_id]);
 
 	mtp_setBlockTarget(thr_id, endiandata, ptarget, &TheMerkleRoot[thr_id]);
-
+	root.resize(0);
 }
-
-
-
 
 /*
 if (fillGpu[thr_id]) {
@@ -221,7 +235,7 @@ fillGpu[thr_id]=false;
 			blockS nBlockMTP[MTP_L *2];
 			unsigned char nProofMTP[MTP_L * 3 * 353 ];
 
-			uint32_t is_sol = mtp_solver(thr_id,foundNonce, &instance[thr_id], nBlockMTP,nProofMTP, TheMerkleRoot[thr_id], mtpHashValue, ordered_tree[thr_id], endiandata,TheUint256Target[0]);
+			uint32_t is_sol = mtp_solver(thr_id,foundNonce, &instance[thr_id], nBlockMTP,nProofMTP, TheMerkleRoot[thr_id], mtpHashValue, *ordered_tree[thr_id], endiandata,TheUint256Target[0]);
 
 			if (is_sol==1 /*&& fulltest(vhash64, ptarget)*/) {
 				int res = 1;

@@ -1155,7 +1155,8 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
 			return false;
 		}
-
+		json_decref(MyObject);
+		free(serialized);
 		//		stratum_recv_line_compact(&stratum);
 
 //		free(mtp);
@@ -2868,7 +2869,6 @@ static bool wanna_mine(int thr_id)
 static void *miner_thread(void *userdata)
 {
 
-
 	struct thr_info *mythr = (struct thr_info *)userdata;
 //	struct mtp * mtp = (struct mtp*)malloc(sizeof(struct mtp));
 	int switchn = pool_switch_count;
@@ -3075,6 +3075,8 @@ static void *miner_thread(void *userdata)
 				}
 			}
 			#endif
+
+
 			memcpy(&work, &g_work, sizeof(struct work));
 
 			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
@@ -3146,6 +3148,7 @@ static void *miner_thread(void *userdata)
 		if (!wanna_mine(thr_id)) {
 
 			// free gpu resources
+printf("*******************freeing gpu ressource here ***********************\n");
 			algo_free_all(thr_id);
 			// clear any free error (algo switch)
 			cuda_clear_lasterror();
@@ -4062,7 +4065,7 @@ wait_stratum_url:
 		if (stratum.job.job_id &&
 		    (!g_work_time || strncmp(stratum.job.job_id, g_work.job_id + 8, sizeof(g_work.job_id)-8))) {
 			pthread_mutex_lock(&g_work_lock);
-
+//printf("*************************new work found *************************\n");
 			if (opt_algo == ALGO_M7) 
 				if (stratum_gen_work_m7(&stratum, &g_work))	g_work_time = time(NULL);
 			else 
@@ -4072,7 +4075,7 @@ wait_stratum_url:
 
 				static uint32_t last_bloc_height;
 				if (!opt_quiet && stratum.job.height != last_bloc_height) {
-					last_bloc_height = stratum.job.height;
+					last_bloc_height = stratum.job.height; 
 					if (net_diff > 0.)
 						applog(LOG_BLUE, "%s block %d, diff %.3f", algo_names[opt_algo],
 							stratum.job.height, net_diff);
@@ -4116,7 +4119,7 @@ wait_stratum_url:
 			MyObject = recode_message(MyObject2);
 			isok = stratum_handle_method_bos_json(ctx, MyObject);
 			json_decref(MyObject2);
-			if (!isok) { // not an answer
+			if (!isok) { // is an answer upon share submission
 				stratum_handle_response_json(MyObject);
 				json_decref(MyObject);
 			}
@@ -4125,7 +4128,7 @@ wait_stratum_url:
 		free(boserror);
 		ctx->sockbuf[0] = '\0';
 		ctx->sockbuf_bossize = 0;
-
+		ctx->sockbuf = (char*)realloc(ctx->sockbuf, ctx->sockbuf_bossize +1);
 			} else {
 		
 			s = stratum_recv_line(&stratum);
@@ -4943,7 +4946,7 @@ int main(int argc, char *argv[])
 	struct thr_info *thr;
 	long flags;
 	int i;
-	 
+	json_set_alloc_funcs(malloc, free);
 	printf("*** ccminer " PACKAGE_VERSION " for nVidia GPUs by djm34 ***\n");
 #ifdef _MSC_VER
 	printf("    Built with VC++ %d and nVidia CUDA SDK %d.%d\n\n", msver(),
