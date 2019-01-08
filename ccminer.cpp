@@ -4176,7 +4176,7 @@ static void show_version_and_exit(void)
 		"pthreads static %s\n"
 #endif
 		"%s\n",
-		PACKAGE_NAME, PACKAGE_VERSION,
+		PACKAGE_NAME, PACKAGE_VERSION, 
 #ifdef WIN32
 		PTW32_VERSION_STRING,
 #endif
