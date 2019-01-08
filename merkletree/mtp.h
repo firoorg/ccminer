@@ -72,4 +72,7 @@ int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 
 MerkleTree::Elements mtp_init(argon2_instance_t *instance);
 MerkleTree::Elements mtp_init2(argon2_instance_t *instance);
-uint8_t *mtp_init3(argon2_instance_t *instance, int thr_id);
+//uint8_t *mtp_init3(argon2_instance_t *instance, int thr_id);
+//void  mtp_init3(argon2_instance_t *instance, int thr_id, MerkleTree *TheTree);
+//MerkleTree  mtp_init3(argon2_instance_t *instance, int thr_id);
+void  mtp_init3(argon2_instance_t *instance, int thr_id, MerkleTree &ThatTree);

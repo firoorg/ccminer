@@ -56,6 +56,7 @@ public :
      */
     MerkleTree(uint8_t* elements, bool preserveOrder = true);
 	MerkleTree();
+	void Destructor();
     /** Destructor */
     virtual ~MerkleTree();
 

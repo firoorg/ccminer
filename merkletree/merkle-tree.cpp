@@ -20,7 +20,10 @@ MerkleTree::MerkleTree(uint8_t * elements, bool preserveOrder)
     : preserveOrder_(preserveOrder)//, elements_(elements)
 {
 //   mem[0]=(elements);
+
+	mem.resize(0);
 	mem.push_back(elements);
+
 /*
 printf("Init layer addr %lx\n",elements);
 	elements_.clear();
@@ -64,8 +67,8 @@ printf("Init layer addr %lx\n",elements);
     }
 */
     getLayers();
-uint64_t *mr=(uint64_t*)mem.back();
-	printf("root %lx %lx\n",mr[0],mr[1]);
+//uint64_t *mr=(uint64_t*)mem.back();
+//	printf("root %lx %lx\n",mr[0],mr[1]);
 //for(;;);
 }
 
@@ -75,13 +78,19 @@ MerkleTree::MerkleTree()
 MerkleTree::~MerkleTree()
 {
 
+
+
+}
+void MerkleTree::Destructor()
+{
+	
 //        printf("destroying tree %d\n",mem.size());
+		mem.resize(0);
+//		printf("destroying tree %d\n", mem.size());
 //	for(int i=0;i<mem.size();i++){
 //		free(mem[i]);
 //	}
-
 }
-
 
 MerkleTree::Buffer MerkleTree::hash(const Buffer& data)
 {

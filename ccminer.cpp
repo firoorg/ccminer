@@ -1150,14 +1150,15 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 		bos_t *serialized = bos_serialize(MyObject, boserror);
 
 		stratum.sharediff = work->sharediff[0];
-		sleep(1);
+
 		if (unlikely(!stratum_send_line_bos(&stratum, serialized))) {
 			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
 			return false;
 		}
+
 		//		stratum_recv_line_compact(&stratum);
 
-
+//		free(mtp);
 
 
 	}
@@ -2210,7 +2211,7 @@ static void workio_cmd_free(struct workio_cmd *wc)
 	switch (wc->cmd) {
 	case WC_SUBMIT_WORK:
 		aligned_free(wc->u.work);
-		aligned_free(wc->t.mtp);
+		free(wc->t.mtp);
 		break;
 	default: /* do nothing */
 		break;
@@ -2469,8 +2470,8 @@ static bool submit_work_mtp(struct thr_info *thr, const struct work *work_in, co
 
 	wc->u.work = (struct work *)aligned_calloc(sizeof(*work_in));
 
-	wc->t.mtp = (struct mtp *)aligned_calloc(sizeof(*mtp_in));
-
+//	wc->t.mtp = (struct mtp *)aligned_calloc(sizeof(*mtp_in));
+	wc->t.mtp = (struct mtp *)malloc(sizeof(*mtp_in));
 	if (!wc->u.work)
 		goto err_out;
 
@@ -2582,7 +2583,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	int i;
 
 	if (!sctx->job.job_id) {
-		applog(LOG_WARNING, "stratum_gen_work: job not yet retrieved");
+//		applog(LOG_WARNING, "stratum_gen_work: job not yet retrieved");
 		return false;
 	}
 
@@ -2866,9 +2867,10 @@ static bool wanna_mine(int thr_id)
 
 static void *miner_thread(void *userdata)
 {
-//printf("entering miner thread\n");
+
+
 	struct thr_info *mythr = (struct thr_info *)userdata;
-	struct mtp * mtp = (struct mtp*)malloc(sizeof(struct mtp));
+//	struct mtp * mtp = (struct mtp*)malloc(sizeof(struct mtp));
 	int switchn = pool_switch_count;
 	int thr_id = mythr->id;
 	int dev_id = device_map[thr_id % MAX_GPUS];
@@ -2936,6 +2938,7 @@ static void *miner_thread(void *userdata)
 	gpu_led_off(dev_id);
 
 	while (!abort_flag) {
+		struct mtp * mtp = (struct mtp*)malloc(sizeof(struct mtp));
 		struct timeval tv_start, tv_end, diff;
 		unsigned long hashes_done;
 		uint32_t start_nonce;
@@ -3668,9 +3671,12 @@ static void *miner_thread(void *userdata)
 			}
 
 		}
+
+	free(mtp);
 	}
 
 out:
+
 //	free(mtp);
 //	free(&work);
 	if (opt_led_mode)
@@ -4064,7 +4070,6 @@ wait_stratum_url:
 			
 			if (stratum.job.clean) {
 
-//		printf("stratum job clean\n");
 				static uint32_t last_bloc_height;
 				if (!opt_quiet && stratum.job.height != last_bloc_height) {
 					last_bloc_height = stratum.job.height;
@@ -4098,17 +4103,28 @@ wait_stratum_url:
 			if (opt_algo == ALGO_MTP)
 			{
 
-				json_t *s2;
-				s2 = stratum_recv_line_c2(&stratum);
-				if (json_object_size(s2) == 0) {
-					stratum_disconnect(&stratum);
-					applog(LOG_ERR, "Stratum connection interrupted");
-					continue;
-				}
-				if (!stratum_handle_method_bos_json(&stratum, s2))
-					stratum_handle_response_json(s2);
-				json_decref(s2);
+		json_t *MyObject = json_object();
+		uint32_t bossize = 0;
+		bool isok = false;
+		stratum_bos_fillbuffer(ctx);
+		json_error_t *boserror = (json_error_t *)malloc(sizeof(json_error_t));
+		do {
+			json_t *MyObject2 = json_object();
+			MyObject2 = bos_deserialize(ctx->sockbuf + bossize, boserror);
+			bossize += bos_sizeof(ctx->sockbuf + bossize);
 
+			MyObject = recode_message(MyObject2);
+			isok = stratum_handle_method_bos_json(ctx, MyObject);
+			json_decref(MyObject2);
+			if (!isok) { // not an answer
+				stratum_handle_response_json(MyObject);
+				json_decref(MyObject);
+			}
+
+		} while (bossize != ctx->sockbuf_bossize);
+		free(boserror);
+		ctx->sockbuf[0] = '\0';
+		ctx->sockbuf_bossize = 0;
 
 			} else {
 		
