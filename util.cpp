@@ -2423,7 +2423,7 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	bool has_claim, has_roots;
 	json_t *merkle_arr;
 	uchar **merkle;
-
+	char* JobID;
 
 	get_currentalgo(algo, sizeof(algo));
 	/*
@@ -2460,7 +2460,7 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	clean = json_is_true(json_array_get(params, p));
 
 
-	char* JobID = (char*)malloc(2 * job_idsize + 1);
+	JobID = (char*)malloc(2 * job_idsize + 1);
 
 	if (!job_id || !prevhash || !coinb1 || !coinb2 || !version || !nbits || !ntime /*||
 																				   strlen(prevhash) != 64 || strlen(version) != 8 ||
