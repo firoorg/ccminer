@@ -631,9 +631,9 @@ struct stratum_job {
 	unsigned char *xnonce2;
 	int merkle_count;
 	unsigned char **merkle;
-	unsigned char version[4];
-	unsigned char nbits[4];
-	unsigned char ntime[4];
+	unsigned char version[8];
+	unsigned char nbits[8];
+	unsigned char ntime[8];
 	unsigned char claim[32]; // lbry
 	bool clean;
 	bool IncXtra;
