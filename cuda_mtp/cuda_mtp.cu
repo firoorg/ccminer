@@ -9,8 +9,8 @@
 
 
 #include "lyra2/cuda_lyra2_vectors.h"
-static uint32_t *h_MinNonces[16]; // this need to get fixed as the rest of that routine
-static uint32_t *d_MinNonces[16];
+/*static */ uint32_t *h_MinNonces[16]; // this need to get fixed as the rest of that routine
+/*static*/ uint32_t *d_MinNonces[16];
 
 __constant__ uint32_t pTarget[8];
 __constant__ uint32_t pData[20]; // truncated data

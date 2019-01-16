@@ -161,6 +161,7 @@ if (JobId[thr_id] != work->data[17] || XtraNonce2[thr_id] != ((uint64_t*)work->x
 //		ordered_tree[thr_id].Destructor();
 
 		delete  ordered_tree[thr_id];
+
 	}
 	cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
 	context[thr_id] = init_argon2d_param((const char*)endiandata);
@@ -232,8 +233,8 @@ fillGpu[thr_id]=false;
 			uint256 TheUint256Target[1];
 			TheUint256Target[0] = ((uint256*)ptarget)[0];
 
-			blockS nBlockMTP[MTP_L *2];
-			unsigned char nProofMTP[MTP_L * 3 * 353 ];
+			blockS nBlockMTP[MTP_L *2] = {0};
+			unsigned char nProofMTP[MTP_L * 3 * 353 ] = {0};
 
 			uint32_t is_sol = mtp_solver(thr_id,foundNonce, &instance[thr_id], nBlockMTP,nProofMTP, TheMerkleRoot[thr_id], mtpHashValue, *ordered_tree[thr_id], endiandata,TheUint256Target[0]);
 

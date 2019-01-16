@@ -1099,8 +1099,8 @@ static bool send_line_bos(curl_socket_t sock, bos_t *s2)
 {
 	size_t sent = 0;
 	int len;
-	char* s;
-	s = (char*)s2->data;
+//	char* s = (char*)malloc(s2->size);
+//	s = (char*)s2->data;
 	len = s2->size;
  
 	while (len > 0) {
@@ -1113,7 +1113,7 @@ static bool send_line_bos(curl_socket_t sock, bos_t *s2)
 		if (select((int)(sock + 1), NULL, &wd, NULL, &timeout) < 1)
 			return false;
 
-		n = send(sock, s + sent, len, 0);
+		n = send(sock, (char*)s2->data + sent, len, 0);
 		if (n < 0) {
 			if (!socket_blocks())
 				return false;
@@ -1122,7 +1122,7 @@ static bool send_line_bos(curl_socket_t sock, bos_t *s2)
 		sent += n;
 		len -= n;
 	}
-
+//	free(s);
 	return true;
 }
 
@@ -1340,7 +1340,7 @@ json_t* recode_message(json_t *MyObject2)
 					size_t index2;
 					json_t *value3;
 					json_t *json_arr2 = json_array();
-					json_array_append(json_arr, json_arr2);
+//					json_array_append(json_arr, json_arr2);
 					json_array_foreach(value2, index2, value3) {
 						if (!istarget) {
 							if (json_is_bytes(value3)) {
@@ -1362,6 +1362,7 @@ json_t* recode_message(json_t *MyObject2)
 								json_array_append(json_arr2, value3);
 						}
 					}
+					json_array_append_new(json_arr, json_arr2);
 					//							json_t *json_arr2 = json_array();
 					//							json_array_append(json_arr, json_arr2);
 				}
@@ -1372,6 +1373,9 @@ json_t* recode_message(json_t *MyObject2)
 	}
 	return MyObject;
 }
+
+
+
 void stratum_bos_fillbuffer(struct stratum_ctx *sctx)
 {
 	int timeout = opt_timeout;
@@ -1385,7 +1389,6 @@ void stratum_bos_fillbuffer(struct stratum_ctx *sctx)
 */
 	do {
 		char s[RBUFSIZE];
-		char *s2;
 		ssize_t n;
 
 		memset(s, 0, RBUFSIZE);
@@ -2413,7 +2416,7 @@ out:
 
 static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 {
-	printf("***************stratum notify ****************************\n");
+
 	char algo[64] = { 0 };
 	const uchar *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *ntime;
 	const uchar *extradata = NULL;
@@ -2423,7 +2426,7 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	bool has_claim, has_roots;
 	json_t *merkle_arr;
 	uchar **merkle;
-	char* JobID;
+	char* JobID = (char*)malloc(2 * 4 + 1);
 
 	get_currentalgo(algo, sizeof(algo));
 	/*
@@ -2459,8 +2462,8 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 
 	clean = json_is_true(json_array_get(params, p));
 
-
-	JobID = (char*)malloc(2 * job_idsize + 1);
+//printf("job_idsize %d\n", job_idsize);
+	
 
 	if (!job_id || !prevhash || !coinb1 || !coinb2 || !version || !nbits || !ntime /*||
 																				   strlen(prevhash) != 64 || strlen(version) != 8 ||
@@ -2538,7 +2541,7 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	ret = true;
 
 out:
-	printf("*************** end stratum notify ****************************\n");
+
 	return ret;
 }
 
@@ -2546,7 +2549,7 @@ out:
 
 static bool stratum_notify_bos_old(struct stratum_ctx *sctx, json_t *params)
 {
-printf("***************stratum notify ****************************\n");
+
 //stratum_free_job(sctx);
 //sleep(15);
 //sleep(30);
@@ -2684,7 +2687,7 @@ printf("***************stratum notify ****************************\n");
 	ret = true;
 
 out:
-	printf("*************** end stratum notify ****************************\n");
+
 //	free(job_id); free(prevhash); free(coinb1); free(coinb2); 
 //	json_decref(merkle_arr);
 

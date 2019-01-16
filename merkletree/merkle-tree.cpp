@@ -286,7 +286,7 @@ void MerkleTree::getLayers()
 void MerkleTree::getNextLayer()
 {
 
-uint8_t *prev_mem=mem.back();
+uint8_t *prev_mem= mem.back();
 
 int size=1024*1024*4*16;
 for(int i=0;i<mem.size();i++)

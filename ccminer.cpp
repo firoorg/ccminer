@@ -1098,6 +1098,7 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 
 
 		if (pool->type & POOL_STRATUM) {
+
 			uint32_t sent = 0;
 			uint32_t ntime, nonce;
 			char *ntimestr, *noncestr, *xnonce2str, *nvotestr;
@@ -1111,42 +1112,27 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 		json_t *json_arr = json_array();
 		json_object_set_new(MyObject, "id", json_integer(4));
 		json_object_set_new(MyObject, "method", json_string("mining.submit"));
-		json_object_set_new(MyObject, "params", json_arr);
-		json_array_append(json_arr, json_string(rpc_user));
 
-		json_t * Truc = json_bytes(0, 0);
+		json_array_append(json_arr, json_string(rpc_user));
 
 		int Err = 0;
 	
-		uchar* hexjob_id = (uchar*)malloc(4);
-		hex2bin(hexjob_id, sobid, 8);
+		uchar hexjob_id[4]; // = (uchar*)malloc(4);
+		hex2bin((uchar*)&hexjob_id, sobid, 4);
 		
 		free(sobid);
-		json_bytes_set(Truc, hexjob_id, 4);
-		json_array_append(json_arr, Truc);
-		Truc = json_bytes(0, 0);
-		Err = json_bytes_set(Truc, work->xnonce2, sizeof(uint64_t*));
-		json_array_append(json_arr, Truc);
-		Truc = json_bytes(0, 0);
-		json_bytes_set(Truc, (uchar*)&ntime, sizeof(uint32_t));
-		json_array_append(json_arr, Truc);
-		Truc = json_bytes(0, 0);
-		json_bytes_set(Truc, (uchar*)&nonce, sizeof(uint32_t));
-		json_array_append(json_arr, Truc);
-		Truc = json_bytes(0, 0);
-		json_bytes_set(Truc, mtp->MerkleRoot, SizeMerkleRoot);
-		json_array_append(json_arr, Truc);
-		Truc = json_bytes(0, 0);
 
-		json_bytes_set(Truc, (uchar*)mtp->nBlockMTP, SizeBlockMTP);
+		json_array_append(json_arr, json_bytes((uchar*)&hexjob_id, 4));		
+		json_array_append(json_arr, json_bytes(work->xnonce2, sizeof(uint64_t*)));
+		json_array_append(json_arr, json_bytes((uchar*)&ntime, sizeof(uint32_t)));
+		json_array_append(json_arr, json_bytes((uchar*)&nonce, sizeof(uint32_t)));
+		json_array_append(json_arr, json_bytes(mtp->MerkleRoot, SizeMerkleRoot));
+		json_array_append(json_arr, json_bytes((uchar*)mtp->nBlockMTP, SizeBlockMTP));
+		json_array_append(json_arr, json_bytes(mtp->nProofMTP, SizeProofMTP));
 
-		json_array_append(json_arr, Truc);
-		Truc = json_bytes(0, 0);
-		json_bytes_set(Truc, mtp->nProofMTP, SizeProofMTP);
-		json_array_append(json_arr, Truc);
+		json_object_set_new(MyObject, "params", json_arr);
 
 		json_error_t *boserror = (json_error_t *)malloc(sizeof(json_error_t));
-
 		bos_t *serialized = bos_serialize(MyObject, boserror);
 
 		stratum.sharediff = work->sharediff[0];
@@ -1155,12 +1141,13 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
 			return false;
 		}
+		free(boserror);
 		json_decref(MyObject);
-		free(serialized);
+		bos_free(serialized);
 		//		stratum_recv_line_compact(&stratum);
 
 //		free(mtp);
-
+		return true;
 
 	}
 	else if (work->txs) { /* gbt */
@@ -2212,7 +2199,7 @@ static void workio_cmd_free(struct workio_cmd *wc)
 	switch (wc->cmd) {
 	case WC_SUBMIT_WORK:
 		aligned_free(wc->u.work);
-		free(wc->t.mtp);
+		aligned_free(wc->t.mtp);
 		break;
 	default: /* do nothing */
 		break;
@@ -2328,6 +2315,7 @@ else {
 
 static void *workio_thread(void *userdata)
 {
+
 	struct thr_info *mythr = (struct thr_info*)userdata;
 	CURL *curl;
 	bool ok = true;
@@ -2471,8 +2459,8 @@ static bool submit_work_mtp(struct thr_info *thr, const struct work *work_in, co
 
 	wc->u.work = (struct work *)aligned_calloc(sizeof(*work_in));
 
-//	wc->t.mtp = (struct mtp *)aligned_calloc(sizeof(*mtp_in));
-	wc->t.mtp = (struct mtp *)malloc(sizeof(*mtp_in));
+	wc->t.mtp = (struct mtp *)aligned_calloc(sizeof(*mtp_in));
+//	wc->t.mtp = (struct mtp *)malloc(sizeof(*mtp_in));
 	if (!wc->u.work)
 		goto err_out;
 
@@ -2612,13 +2600,14 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
 
 //	printf("thefull job id %s\n",work->job_id);
-//	printf("reduced job id %s\n", work->job_id+8);
+//	printf("reduced job id %s\n", work->job_id+8); 
+/*
 	unsigned char* Transfer = (unsigned char*)malloc(sctx->job.coinbase_size);
-
 	if (opt_algo == ALGO_MTP) {
 		memcpy(Transfer, sctx->job.coinbase, sctx->job.coinbase_size);
 		memcpy(Transfer + 60, work->xnonce2, 8);
 	}
+*/
 
 
 
@@ -2877,6 +2866,7 @@ static void *miner_thread(void *userdata)
 
 
 	struct work work;
+	struct mtp mtp;
 	uint64_t loopcnt = 0;
 	uint32_t max_nonce;
 	uint32_t end_nonce = UINT32_MAX / opt_n_threads * (thr_id + 1) ;
@@ -2938,7 +2928,7 @@ static void *miner_thread(void *userdata)
 	gpu_led_off(dev_id);
 
 	while (!abort_flag) {
-		struct mtp * mtp = (struct mtp*)malloc(sizeof(struct mtp));
+//		struct mtp * mtp = (struct mtp*)malloc(sizeof(struct mtp));
 		struct timeval tv_start, tv_end, diff;
 		unsigned long hashes_done;
 		uint32_t start_nonce;
@@ -3424,7 +3414,7 @@ printf("*******************freeing gpu ressource here ***********************\n"
 			rc = scanhash_qubit(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_MTP:
-			rc = scanhash_mtp(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, mtp,&stratum);
+			rc = scanhash_mtp(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, &mtp,&stratum);
 //			pthread_mutex_lock(&stratum_work_lock);
 //			stratum.job.IncXtra = true;
 //			pthread_mutex_unlock(&stratum_work_lock);
@@ -3631,7 +3621,7 @@ printf("*******************freeing gpu ressource here ***********************\n"
 			nonceptr[0] = work.nonces[0];
 
 			if (opt_algo == ALGO_MTP) {
-				if (!submit_work_mtp(mythr, &work, mtp))
+				if (!submit_work_mtp(mythr, &work, &mtp))
 					break;
 			}
 			else {
@@ -3661,7 +3651,7 @@ printf("*******************freeing gpu ressource here ***********************\n"
 				}
 
 				if (opt_algo == ALGO_MTP) {
-					if (!submit_work_mtp(mythr, &work, mtp))
+					if (!submit_work_mtp(mythr, &work, &mtp))
 						break;
 				}
 				else {
@@ -3675,13 +3665,13 @@ printf("*******************freeing gpu ressource here ***********************\n"
 
 		}
 
-	free(mtp);
+//	free(mtp);
 	}
 
 out:
 
-//	free(mtp);
-//	free(&work);
+	free(&mtp);
+	free(&work);
 	if (opt_led_mode)
 		gpu_led_off(dev_id);
 	if (opt_debug_threads)
@@ -4106,24 +4096,24 @@ wait_stratum_url:
 			if (opt_algo == ALGO_MTP)
 			{
 
-		json_t *MyObject = json_object();
+		//json_t *MyObject = json_object();
 		uint32_t bossize = 0;
 		bool isok = false;
 		stratum_bos_fillbuffer(ctx);
 		json_error_t *boserror = (json_error_t *)malloc(sizeof(json_error_t));
 		do {
-			json_t *MyObject2 = json_object();
-			MyObject2 = bos_deserialize(ctx->sockbuf + bossize, boserror);
+			//json_t *MyObject2 = json_object();
+			json_t *MyObject2 = bos_deserialize(ctx->sockbuf + bossize, boserror);
 			bossize += bos_sizeof(ctx->sockbuf + bossize);
 
-			MyObject = recode_message(MyObject2);
+			json_t *MyObject = recode_message(MyObject2);
 			isok = stratum_handle_method_bos_json(ctx, MyObject);
 			json_decref(MyObject2);
 			if (!isok) { // is an answer upon share submission
 				stratum_handle_response_json(MyObject);
-				json_decref(MyObject);
+				
 			}
-
+			json_decref(MyObject);
 		} while (bossize != ctx->sockbuf_bossize);
 		free(boserror);
 		ctx->sockbuf[0] = '\0';
