@@ -1428,14 +1428,6 @@ json_t *stratum_recv_line_bos(struct stratum_ctx *sctx)
 		stratum_bos_fillbuffer(sctx);
 
 
-
-				if (!bos_validate(sctx->sockbuf, sctx->sockbuf_bossize)) {
-					applog(LOG_ERR, "stratum_recv_line: not a serialized object");
-					return false;
-
-				}
-				else {
-
 					json_error_t *boserror = (json_error_t *)malloc(sizeof(json_error_t));
 					MyObject2 = bos_deserialize(sctx->sockbuf, boserror);
 					json_t *json_arr = json_array();
@@ -1481,7 +1473,7 @@ json_t *stratum_recv_line_bos(struct stratum_ctx *sctx)
 						sctx->sockbuf_bossize = 0;
 					}
 					goto out;
-				}
+				
 
 
 
