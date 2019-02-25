@@ -17,6 +17,9 @@
 #define container_of(ptr_, type_, member_)  \
     ((type_ *)((char *)ptr_ - offsetof(type_, member_)))
 
+#define bytes_container_of(ptr_, type_, member_)  \
+    ((type_ *)((unsigned char *)ptr_ - offsetof(type_, member_)))
+
 /* On some platforms, max() may already be defined */
 #ifndef max
 #define max(a, b)  ((a) > (b) ? (a) : (b))
@@ -93,7 +96,7 @@ typedef struct {
 #define json_to_string(json_)  container_of(json_, json_string_t, json)
 #define json_to_real(json_)    container_of(json_, json_real_t, json)
 #define json_to_integer(json_) container_of(json_, json_integer_t, json)
-#define json_to_bytes(json_)   container_of(json_, json_bytes_t, json)
+#define json_to_bytes(json_)   bytes_container_of(json_, json_bytes_t, json)
 
 /* Create a string by taking ownership of an existing buffer */
 json_t *jsonp_stringn_nocheck_own(const char *value, size_t len);

@@ -2638,6 +2638,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 			sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	}
 
+
 	for (i = 0; i < sctx->job.merkle_count; i++) {
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
 		if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)

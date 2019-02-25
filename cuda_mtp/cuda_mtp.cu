@@ -9,17 +9,18 @@
 
 
 #include "lyra2/cuda_lyra2_vectors.h"
-/*static */ uint32_t *h_MinNonces[16]; // this need to get fixed as the rest of that routine
-/*static*/ uint32_t *d_MinNonces[16];
+static uint32_t *h_MinNonces[16]; // this need to get fixed as the rest of that routine
+static uint32_t *d_MinNonces[16];
 
 __constant__ uint32_t pTarget[8];
 __constant__ uint32_t pData[20]; // truncated data
 __constant__ uint4 Elements[1];
- uint4 * HBlock[16];
+ulonglong2 * HBlock[16];
+uint8 *GYLocal[16];
 /*__device__*/ uint32_t *Header[16];
 /*__device__*/ uint2 *buffer_a[16];
 
-#define ARGON2_SYNC_POINTS 4
+#define ARGON2_SYNC_POINTS 4 
 #define argon_outlen 32
 #define argon_timecost 1
 #define argon_memcost 4*1024*1024 // *1024 //32*1024*2 //1024*256*1 //2Gb
@@ -64,6 +65,17 @@ __constant__ const uint2 blakeFinal[8] =
 	{ 0x2b3e6c1fUL, 0x9b05688cUL },
 	{ 0xfb41bd6bUL, 0x1f83d9abUL },
 	{ 0x137e2179UL, 0x5be0cd19UL }
+};
+
+__constant__ const uint64_t blakeFinal_[8] = {
+	 0x6a09e667f2bdc928UL ,
+	 0xbb67ae8584caa73bUL ,
+	 0x3c6ef372fe94f82bUL ,
+	 0xa54ff53a5f1d36f1UL ,
+	 0x510e527fade682d1UL ,
+	 0x9b05688c2b3e6c1fUL ,
+	 0x1f83d9abfb41bd6bUL ,
+	 0x5be0cd19137e2179UL 
 };
 
 __constant__ const uint2 blakeIV[8] =
@@ -120,6 +132,59 @@ uint64_t ROTR64X(const uint64_t value, const int offset) {
 	return devectorize(result);
 }
 
+__device__ __forceinline__
+uint2 ROTR64X(const uint2 tmp, const int offset) {
+	uint2 result;
+
+	if (offset < 32) { //wrong
+		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(tmp.x), "r"(tmp.y), "r"(offset));
+		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(tmp.y), "r"(tmp.x), "r"(offset));
+	}
+	else {
+		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(tmp.y), "r"(tmp.x), "r"(offset));
+		asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(tmp.x), "r"(tmp.y), "r"(offset));
+	}
+	return result;
+}
+__device__ __forceinline__
+uint2 ROTR64X8(const uint2 tmp) {
+	uint2 result;
+	result.x = __byte_perm(tmp.x, tmp.y, 0x4321);
+	result.y = __byte_perm(tmp.y, tmp.x, 0x4321);
+	return result;
+}
+
+__device__ __forceinline__
+uint2 ROTR64X16(const uint2 tmp) {
+	uint2 result;
+	result.x = __byte_perm(tmp.x, tmp.y, 0x5432);
+	result.y = __byte_perm(tmp.y, tmp.x, 0x5432);
+	return result;
+}
+
+__device__ __forceinline__
+uint2 ROTR64X24(const uint2 tmp) {
+	uint2 result;
+	result.x = __byte_perm(tmp.x, tmp.y, 0x6543);
+	result.y = __byte_perm(tmp.y, tmp.x, 0x6543);
+	return result;
+}
+
+__device__ __forceinline__
+uint2 ROTR64XB32(const uint2 tmp, const int offset) {
+	uint2 result;
+	asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(tmp.y), "r"(tmp.x), "r"(offset));
+	asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(tmp.x), "r"(tmp.y), "r"(offset));
+	return result;
+}
+
+__device__ __forceinline__
+uint2 ROTR64XS32(const uint2 tmp, const int offset) {
+	uint2 result; // probably wrong
+	asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.x) : "r"(tmp.x), "r"(tmp.y), "r"(offset));
+	asm("shf.r.wrap.b32 %0, %1, %2, %3;" : "=r"(result.y) : "r"(tmp.y), "r"(tmp.x), "r"(offset));
+	return result;
+}
 __constant__ static const uint8_t blake2b_sigma[12][16] =
 {
 	{ 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 } ,
@@ -335,15 +400,28 @@ __device__ __forceinline__ static int blake2b_compress2_256(uint64_t *hash, cons
 	for (int i = 0; i < 8; ++i)
 		v[i] = hzcash[i];
 
-	v[8] = devectorize(blakeIV[0]);
-	v[9] = devectorize(blakeIV[1]);
-	v[10] = devectorize(blakeIV[2]);
-	v[11] = devectorize(blakeIV[3]);
-	v[12] = devectorize(blakeIV[4]);
+
+	const uint64_t blakeIV_[8] = {
+		0x6a09e667f3bcc908ULL,
+		0xbb67ae8584caa73bULL,
+		0x3c6ef372fe94f82bULL,
+		0xa54ff53a5f1d36f1ULL,
+		0x510e527fade682d1ULL,
+		0x9b05688c2b3e6c1fULL,
+		0x1f83d9abfb41bd6bULL,
+		0x5be0cd19137e2179ULL
+	};
+
+
+	v[8] = blakeIV_[0];
+	v[9] = blakeIV_[1];
+	v[10] = blakeIV_[2];
+	v[11] = blakeIV_[3];
+	v[12] = blakeIV_[4];
 	v[12] ^= len;
-	v[13] = devectorize(blakeIV[5]);
-	v[14] = ~devectorize(blakeIV[6]);
-	v[15] = devectorize(blakeIV[7]);
+	v[13] = blakeIV_[5];
+	v[14] = ~blakeIV_[6];
+	v[15] = blakeIV_[7];
 
 
 
@@ -391,6 +469,79 @@ __device__ __forceinline__ static int blake2b_compress2_256(uint64_t *hash, cons
 #undef ROUND
 	return 0;
 }
+
+
+__device__ __forceinline__ static int blake2b_compress2_256(uint2 *hash, const uint2 *hzcash, const uint2 block[16], const uint32_t len)
+{
+	uint2 m[16];
+	uint2 v[16];
+#pragma unroll
+	for (int i = 0; i < 16; ++i)
+		m[i] = block[i];
+#pragma unroll
+	for (int i = 0; i < 8; ++i)
+		v[i] = hzcash[i];
+
+
+
+	v[8] = blakeIV[0];
+	v[9] = blakeIV[1];
+	v[10] = blakeIV[2];
+	v[11] = blakeIV[3];
+	v[12] = blakeIV[4];
+	v[12].x ^= len;
+	v[13] = blakeIV[5];
+	v[14] = ~blakeIV[6];
+	v[15] = blakeIV[7];
+
+
+
+#define G(r,i,a,b,c,d) \
+   { \
+     v[a] +=   v[b] + (m[blake2b_sigma[r][2*i+0]]); \
+     v[d] = eorswap32(v[d] , v[a]); \
+     v[c] += v[d]; \
+     v[b] = ROTR64X24(v[b] ^ v[c]); \
+     v[a] += v[b] + (m[blake2b_sigma[r][2*i+1]]); \
+     v[d] = ROTR64X16(v[d] ^ v[a]); \
+     v[c] += v[d]; \
+     v[b] = ROTR64XB32(v[b] ^ v[c], 63); \
+  } 
+
+#define ROUND(r)  \
+  { \
+    G(r,0, 0,4,8,12); \
+    G(r,1, 1,5,9,13); \
+    G(r,2, 2,6,10,14); \
+    G(r,3, 3,7,11,15); \
+    G(r,4, 0,5,10,15); \
+    G(r,5, 1,6,11,12); \
+    G(r,6, 2,7,8,13); \
+    G(r,7, 3,4,9,14); \
+  } 
+
+	ROUND(0);
+	ROUND(1);
+	ROUND(2);
+	ROUND(3);
+	ROUND(4);
+	ROUND(5);
+	ROUND(6);
+	ROUND(7);
+	ROUND(8);
+	ROUND(9);
+	ROUND(10);
+	ROUND(11);
+#pragma unroll
+	for (int i = 0; i < 4; ++i)
+		hash[i] = hzcash[i] ^ v[i] ^ v[i + 8];
+
+#undef G
+#undef ROUND
+	return 0;
+}
+
+
 
 __device__ __forceinline__ static int blake2b_compress2c_256(uint64_t *hash, const uint64_t *hzcash, const uint64_t block[16], const uint32_t len)
 {
@@ -593,6 +744,86 @@ __device__ __forceinline__ static int blake2b_compress2b(uint64_t *hzcash, const
 	ROUND11;
 	*/
 
+	for (int i = 0; i <  8; ++i)
+		hzcash[i] ^= v[i] ^ v[i + 8];
+
+#undef G
+#undef ROUND
+	return 0;
+}
+
+
+
+__device__ __forceinline__ static int blake2b_compress2b(uint2 *hzcash, const uint2 * __restrict__ m, const uint32_t len, int last)
+{
+
+	//	uint64_t m[16];
+	uint2 v[16];
+	 const uint2 blakeIVl[8] =
+	{
+		{ 0xf3bcc908UL, 0x6a09e667UL },
+		{ 0x84caa73bUL, 0xbb67ae85UL },
+		{ 0xfe94f82bUL, 0x3c6ef372UL },
+		{ 0x5f1d36f1UL, 0xa54ff53aUL },
+		{ 0xade682d1UL, 0x510e527fUL },
+		{ 0x2b3e6c1fUL, 0x9b05688cUL },
+		{ 0xfb41bd6bUL, 0x1f83d9abUL },
+		{ 0x137e2179UL, 0x5be0cd19UL }
+	};
+
+#pragma unroll
+	for (int i = 0; i < 8; ++i)
+		v[i] = hzcash[i];
+
+
+	v[8] = blakeIVl[0];
+	v[9] = blakeIVl[1];
+	v[10] = blakeIVl[2];
+	v[11] = blakeIVl[3];
+	v[12] = blakeIVl[4];
+	v[12].x ^= len;
+	v[13] = blakeIVl[5];
+	v[14] = last ? ~blakeIVl[6] : blakeIVl[6];
+	v[15] = blakeIVl[7];
+
+
+#define G(r,i,a,b,c,d) \
+   { \
+     v[a] +=   v[b] + (m[blake2b_sigma[r][2*i+0]]); \
+     v[d] = eorswap32(v[d] , v[a]); \
+     v[c] += v[d]; \
+     v[b] = ROTR64X24(v[b] ^ v[c]); \
+     v[a] += v[b] + (m[blake2b_sigma[r][2*i+1]]); \
+     v[d] = ROTR64X16(v[d] ^ v[a]); \
+     v[c] += v[d]; \
+     v[b] = ROTR64XB32(v[b] ^ v[c], 63); \
+  } 
+#define ROUND(r)  \
+  { \
+    G(r,0, 0,4,8,12); \
+    G(r,1, 1,5,9,13); \
+    G(r,2, 2,6,10,14); \
+    G(r,3, 3,7,11,15); \
+    G(r,4, 0,5,10,15); \
+    G(r,5, 1,6,11,12); \
+    G(r,6, 2,7,8,13); \
+    G(r,7, 3,4,9,14); \
+  } 
+
+
+	ROUND(0);
+	ROUND(1);
+	ROUND(2);
+	ROUND(3);
+	ROUND(4);
+	ROUND(5);
+	ROUND(6);
+	ROUND(7);
+	ROUND(8);
+	ROUND(9);
+	ROUND(10);
+	ROUND(11);
+
 	for (int i = 0; i < 8; ++i)
 		hzcash[i] ^= v[i] ^ v[i + 8];
 
@@ -601,6 +832,255 @@ __device__ __forceinline__ static int blake2b_compress2b(uint64_t *hzcash, const
 	return 0;
 }
 
+
+
+__forceinline__ __device__ unsigned lane_id()
+{
+	unsigned ret;
+	asm volatile ("mov.u32 %0, %laneid;" : "=r"(ret));
+	return ret;
+}
+
+__forceinline__ __device__ unsigned warp_id()
+{
+	// this is not equal to threadIdx.x / 32
+	unsigned ret;
+	asm volatile ("mov.u32 %0, %warpid;" : "=r"(ret));
+	return ret;
+}
+
+
+__device__ __forceinline__ static int blake2b_compress2b_new(uint64_t *hzcash, const ulonglong2 * __restrict__ block, const uint64_t * __restrict__ block0, const uint32_t len, int last)
+{
+
+	uint64_t m[16];
+	uint64_t v[16];
+
+	const uint64_t blakeIV_[8] = {
+		0x6a09e667f3bcc908ULL,
+		0xbb67ae8584caa73bULL,
+		0x3c6ef372fe94f82bULL,
+		0xa54ff53a5f1d36f1ULL,
+		0x510e527fade682d1ULL,
+		0x9b05688c2b3e6c1fULL,
+		0x1f83d9abfb41bd6bULL,
+		0x5be0cd19137e2179ULL
+	};
+	#pragma unroll
+	for (int i = 0; i < 4; ++i)
+		m[i] = block0[i];
+	
+	#pragma unroll
+	for (int i = 2; i < 8; ++i)
+	((ulonglong2*)m)[i] = block[(i-2)*(8+1) + lane_id()%8];
+	
+#pragma unroll
+	for (int i = 0; i < 8; ++i)
+		v[i] = hzcash[i];
+
+
+
+
+	v[8] = blakeIV_[0];
+	v[9] = blakeIV_[1];
+	v[10] = blakeIV_[2];
+	v[11] = blakeIV_[3];
+	v[12] = blakeIV_[4];
+	v[12] ^= len;
+	v[13] = blakeIV_[5];
+	v[14] = last ? ~blakeIV_[6] : blakeIV_[6];
+	v[15] = blakeIV_[7];
+
+	/*
+	if(!thread){
+	printf("0x%llxULL\n", v[12]);
+	}*/
+
+#define G(r,i,a,b,c,d) \
+   { \
+     v[a] +=   v[b] + (m[blake2b_sigma[r][2*i+0]]); \
+     v[d] = eorswap64(v[d] , v[a]); \
+     v[c] += v[d]; \
+     v[b] = ROTR64X(v[b] ^ v[c], 24); \
+     v[a] += v[b] + (m[blake2b_sigma[r][2*i+1]]); \
+     v[d] = ROTR64X(v[d] ^ v[a], 16); \
+     v[c] += v[d]; \
+     v[b] = ROTR64X(v[b] ^ v[c], 63); \
+  } 
+#define ROUND(r)  \
+  { \
+    G(r,0, 0,4,8,12); \
+    G(r,1, 1,5,9,13); \
+    G(r,2, 2,6,10,14); \
+    G(r,3, 3,7,11,15); \
+    G(r,4, 0,5,10,15); \
+    G(r,5, 1,6,11,12); \
+    G(r,6, 2,7,8,13); \
+    G(r,7, 3,4,9,14); \
+  } 
+
+#define H(r,i,a,b,c,d) \
+   { \
+     v[a] +=   v[b] + (m[blake2b_sigma[r][2*i+0]]); \
+     v[d] = eorswap64(v[d] , v[a]); \
+     v[c] += v[d]; \
+     v[b] = ROTR64X(v[b] ^ v[c], 24); \
+     v[a] += v[b] + (m[blake2b_sigma[r][2*i+1]]); \
+     v[d] = ROTR64X(v[d] ^ v[a], 16); \
+     v[c] += v[d]; \
+  } 
+
+#define ROUNDF  \
+  { \
+    G(11,0, 0,4,8,12); \
+    G(11,1, 1,5,9,13); \
+    G(11,2, 2,6,10,14); \
+    G(11,3, 3,7,11,15); \
+    if(!last){\
+    G(11,4, 0,5,10,15); \
+    G(11,5, 1,6,11,12); \
+    G(11,6, 2,7,8,13); \
+    G(11,7, 3,4,9,14); \
+    }else{\
+    H(11,4, 0,5,10,15); \
+    H(11,5, 1,6,11,12); \
+    H(11,6, 2,7,8,13); \
+    H(11,7, 3,4,9,14); \
+    }\
+  }
+
+
+	ROUND(0);
+	ROUND(1);
+	ROUND(2);
+	ROUND(3);
+	ROUND(4);
+	ROUND(5);
+	ROUND(6);
+	ROUND(7);
+	ROUND(8);
+	ROUND(9);
+	ROUND(10);
+	ROUND(11);
+	//	ROUNDF;
+	/*
+	ROUND0;
+	ROUND1;
+	ROUND2;
+	ROUND3;
+	ROUND4;
+	ROUND5;
+	ROUND6;
+	ROUND7;
+	ROUND8;
+	ROUND9;
+	ROUND10;
+	ROUND11;
+	*/
+
+	for (int i = 0; i < 8; ++i)
+		hzcash[i] ^= v[i] ^ v[i + 8];
+
+#undef G
+#undef ROUND
+	return 0;
+}
+
+
+__device__ __forceinline__ static int blake2b_compress2b_new(uint2 *hzcash, const uint4 * __restrict__ block, const uint2 * __restrict__ block0, const uint32_t len, int last)
+{
+
+	uint2 m[16];
+	uint2 v[16];
+
+	const uint2 blakeIVl[8] =
+	{
+		{ 0xf3bcc908UL, 0x6a09e667UL },
+		{ 0x84caa73bUL, 0xbb67ae85UL },
+		{ 0xfe94f82bUL, 0x3c6ef372UL },
+		{ 0x5f1d36f1UL, 0xa54ff53aUL },
+		{ 0xade682d1UL, 0x510e527fUL },
+		{ 0x2b3e6c1fUL, 0x9b05688cUL },
+		{ 0xfb41bd6bUL, 0x1f83d9abUL },
+		{ 0x137e2179UL, 0x5be0cd19UL }
+	};
+
+#pragma unroll
+	for (int i = 0; i < 4; ++i)
+		m[i] = block0[i];
+
+#pragma unroll
+	for (int i = 2; i < 8; ++i)
+		((uint4*)m)[i] = block[(i - 2)*(8 + 1) + lane_id() % 8];
+
+#pragma unroll
+	for (int i = 0; i < 8; ++i)
+		v[i] = hzcash[i];
+
+
+
+
+	v[8] = blakeIVl[0];
+	v[9] = blakeIVl[1];
+	v[10] = blakeIVl[2];
+	v[11] = blakeIVl[3];
+	v[12] = blakeIVl[4];
+	v[12].x ^= len;
+	v[13] = blakeIVl[5];
+	v[14] = last ? ~blakeIVl[6] : blakeIVl[6];
+	v[15] = blakeIVl[7];
+
+	/*
+	if(!thread){
+	printf("0x%llxULL\n", v[12]);
+	}*/
+
+#define G(r,i,a,b,c,d) \
+   { \
+     v[a] +=   v[b] + (m[blake2b_sigma[r][2*i+0]]); \
+     v[d] = eorswap32(v[d] , v[a]); \
+     v[c] += v[d]; \
+     v[b] = ROTR64X24(v[b] ^ v[c]); \
+     v[a] += v[b] + (m[blake2b_sigma[r][2*i+1]]); \
+     v[d] = ROTR64X16(v[d] ^ v[a]); \
+     v[c] += v[d]; \
+     v[b] = ROTR64XB32(v[b] ^ v[c], 63); \
+  } 
+#define ROUND(r)  \
+  { \
+    G(r,0, 0,4,8,12); \
+    G(r,1, 1,5,9,13); \
+    G(r,2, 2,6,10,14); \
+    G(r,3, 3,7,11,15); \
+    G(r,4, 0,5,10,15); \
+    G(r,5, 1,6,11,12); \
+    G(r,6, 2,7,8,13); \
+    G(r,7, 3,4,9,14); \
+  } 
+
+
+
+	ROUND(0);
+	ROUND(1);
+	ROUND(2);
+	ROUND(3);
+	ROUND(4);
+	ROUND(5);
+	ROUND(6);
+	ROUND(7);
+	ROUND(8);
+	ROUND(9);
+	ROUND(10);
+	ROUND(11);
+
+
+	for (int i = 0; i < 8; ++i)
+		hzcash[i] ^= v[i] ^ v[i + 8];
+
+#undef G
+#undef ROUND
+	return 0;
+}
 
 
 
@@ -621,21 +1101,6 @@ __device__ __forceinline__ void prefetchu(void* addr)
 
 #define TPB_MTP 320
 
-__forceinline__ __device__ unsigned lane_id()
-{
-	unsigned ret;
-	asm volatile ("mov.u32 %0, %laneid;" : "=r"(ret));
-	return ret;
-}
-
-__forceinline__ __device__ unsigned warp_id()
-{
-	// this is not equal to threadIdx.x / 32
-	unsigned ret;
-	asm volatile ("mov.u32 %0, %warpid;" : "=r"(ret));
-	return ret;
-}
-
 
 
 __device__ __forceinline__ uint32_t load32(uint32_t * const addr)
@@ -645,14 +1110,48 @@ __device__ __forceinline__ uint32_t load32(uint32_t * const addr)
 	return x;
 }
 
-
-#define FARLOAD(x) far[warp][(x)*(8+SHR_OFF) + lane]
-#define FARSTORE(x) far[warp][lane*(8+SHR_OFF) + (x)]
+#define Granularity 8
+#define Gran3  Granularity * 3 / 4
+#define Gran1  Granularity * 1 / 4
 #define SHR_OFF 1
+#define FARLOAD(x) far[warp][(x)*(Granularity+SHR_OFF) + lane]
+#define FARSTORE(x) far[warp][lane*(Granularity+SHR_OFF) + (x)]
+
+__global__ __launch_bounds__(TPB_MTP, 1)
+void yloop_init(uint32_t thr_id, uint32_t threads, uint32_t startNounce, uint8 *GY)
+{
+	unsigned mask = __activemask();
+	//	mask = 0xffffffff;
+	//	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t NonceNumber = 1;  // old
+	uint32_t ThreadNumber = 1;
+	uint32_t event_thread = (blockDim.x * blockIdx.x + threadIdx.x); //thread / ThreadNumber;
+	uint32_t NonceIterator = startNounce + event_thread;
+
+		//		const uint4 *	 __restrict__ GBlock = &((uint4*)DBlock)[0];
+		uint8 YLocal;
+
+		uint16 DataChunk[2] = { 0 };
+
+
+		((uint8 *)DataChunk)[0] = ((uint8 *)pData)[0];
+		((uint8 *)DataChunk)[1] = ((uint8 *)pData)[1];
+		//((uint2x4 *)DataChunk)[0] =  __ldg4(&((uint2x4 *)pData)[0]);
+		//((uint2x4 *)DataChunk)[1] = __ldg4(&((uint2x4 *)pData)[1]);
+
+		((uint4*)DataChunk)[4] = ((uint4*)pData)[4];
+		((uint4*)DataChunk)[5] = ((uint4*)Elements)[0];
+
+		((uint16*)DataChunk)[1].hi.s0 = NonceIterator;
+
+		blake2b_compress2_256((uint2*)&YLocal, blakeFinal, (uint2*)DataChunk, 100);
+		GY[event_thread] = YLocal;
+}
+
 
 
 __global__ __launch_bounds__(TPB_MTP, 1)
-void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const uint4  * __restrict__ DBlock,
+void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const uint4  * __restrict__ GBlock,
 	uint32_t * __restrict__ SmallestNonce)
 {
 	unsigned mask = __activemask();
@@ -662,28 +1161,23 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 	uint32_t ThreadNumber = 1;
 	uint32_t event_thread = (blockDim.x * blockIdx.x + threadIdx.x); //thread / ThreadNumber;
 	uint32_t NonceIterator = startNounce + event_thread;
-	int lane = lane_id() % 8;
-	int warp = threadIdx.x / 8;;//warp_id();
-	__shared__ __align__(128) ulonglong2 far[TPB_MTP / 8][8 * (8 + SHR_OFF)];
-	__shared__ __align__(32) uint32_t farIndex[TPB_MTP / 8][8];
+	int lane = lane_id() % Granularity;
+	int warp = threadIdx.x / Granularity;
+	__shared__ __align__(128) uint4 far[TPB_MTP / Granularity][Granularity * (Granularity + SHR_OFF)];
+	__shared__ __align__(32) uint32_t farIndex[TPB_MTP / Granularity][Granularity];
 
-	if (event_thread < threads)
+
+//	if (event_thread < threads)
 	{
 
-		const ulonglong2 *	 __restrict__ GBlock = &((ulonglong2*)DBlock)[0];
-		uint8 YLocal;
+//		const uint4 *	 __restrict__ GBlock = &((uint4*)DBlock)[0];
+		uint8 YLocal; // = GY[event_thread];
 
-		ulong8 DataChunk[2] = { 0 };
-		/*
-		((uint4*)DataChunk)[0] = ((uint4*)pData)[0];
-		((uint4*)DataChunk)[1] = ((uint4*)pData)[1];
+		uint16 DataChunk[2] = { 0 };
 
-		((uint4*)DataChunk)[2] = ((uint4*)pData)[2];
-		((uint4*)DataChunk)[3] = ((uint4*)pData)[3];
-		*/
 
-		((uint2x4 *)DataChunk)[0] = ((uint2x4 *)pData)[0];
-		((uint2x4 *)DataChunk)[1] = ((uint2x4 *)pData)[1];
+		((uint8 *)DataChunk)[0] = ((uint8 *)pData)[0];
+		((uint8 *)DataChunk)[1] = ((uint8 *)pData)[1];
 		//((uint2x4 *)DataChunk)[0] =  __ldg4(&((uint2x4 *)pData)[0]);
 		//((uint2x4 *)DataChunk)[1] = __ldg4(&((uint2x4 *)pData)[1]);
 
@@ -692,7 +1186,7 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 
 		((uint16*)DataChunk)[1].hi.s0 = NonceIterator;
 
-		blake2b_compress2_256((uint64_t*)&YLocal, (uint64_t*)blakeFinal, (uint64_t*)DataChunk, 100);
+		blake2b_compress2_256((uint2*)&YLocal, blakeFinal, (uint2*)DataChunk, 100);
 
 
 		bool init_blocks;
@@ -701,84 +1195,175 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 		init_blocks = false;
 		unmatch_block = 0;
 
-#pragma unroll 1
+		#pragma unroll 1
 		for (int j = 1; j <= mtp_L; j++)
 		{
+			((uint8*)DataChunk)[0] = YLocal;
 
-			//				localIndex = YLocal.s0%(argon_memcost);
-			//				localIndex = YLocal.s0 & 0x3FFFFF;
-			//			uint64_t farIndex[8];
-
-
-#pragma unroll
-			for (int t = 0; t<2; t++) {
-				ulonglong2 *D = (ulonglong2*)&YLocal;
-				FARLOAD(t + 6) = D[t];
-
-			}
 			farIndex[warp][lane] = YLocal.s0 & 0x3FFFFF;
 			__syncwarp(mask);
 
-			ulong8 DataChunk[2];
 			uint32_t len = 0;
 
-			uint16 DataTmp; uint2 * blake_init = (uint2*)&DataTmp;
-			for (int i = 0; i<8; i++)blake_init[i] = blakeFinal[i];
-
-			//			uint8 part;
+			uint16 DataTmp; 
+			DataTmp = ((uint16*)blakeFinal)[0];
 
 
-#pragma unroll 1
+			#pragma unroll 1
 			for (int i = 0; i < 9; i++) {
 				int last = (i == 8);
-#pragma unroll
-				for (int t = 0; t<2; t++) {
-					ulonglong2 *D = (ulonglong2*)&YLocal;
-					D[t] = FARLOAD(t + 6);
+
+
+				len += last ? 32 : 128;
+
+
+//					#pragma unroll 
+					for (int t = 0; t<Granularity; t++) {
+
+						const uint4 * __restrict__ farP = &GBlock[farIndex[warp][t] * 64 + 0 + 8 * i + 0];
+
+						far[warp][lane*(Granularity + SHR_OFF) + (t)] = (last) ? make_uint4(0, 0, 0, 0) : farP[lane];
+					}
+
+					__syncwarp(mask);
+
+				
+				#pragma unroll
+				for (int t = 0; t< Gran3 + Gran1 ; t++) {
+					uint4 *D = (uint4*)DataChunk;
+					D[t + Gran1] = (FARLOAD(t));
+				}
+//				((ulonglong4*)DataChunk)[0] = YLocal;
+
+				blake2b_compress2b((uint2*)&DataTmp, (uint2*)DataChunk, len, last);
+				
+//				if (last) continue;
+				#pragma unroll
+				for (int t = 0; t< Gran1 ; t++) {
+					uint4 *D = (uint4*)&DataChunk;
+					D[t] = FARLOAD(t + Gran3);
+				}
+			
+			}
+//////////////
+
+///////////////
+			YLocal = ((uint8*)&DataTmp)[0];
+
+		}
+
+
+
+		if (((uint32_t*)&YLocal)[7] <= pTarget[7])
+		{
+			atomicMin(&SmallestNonce[0], NonceIterator);
+		}
+
+	}
+}
+
+
+__global__ __launch_bounds__(TPB_MTP, 1)
+void mtp_yloop_new(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const uint4  * __restrict__ GBlock,
+	uint32_t * __restrict__ SmallestNonce)
+{
+	unsigned mask = __activemask();
+	//	mask = 0xffffffff;
+	//	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
+	uint32_t NonceNumber = 1;  // old
+	uint32_t ThreadNumber = 1;
+	uint32_t event_thread = (blockDim.x * blockIdx.x + threadIdx.x); //thread / ThreadNumber;
+	uint32_t NonceIterator = startNounce + event_thread;
+	int lane = lane_id() % Granularity;
+	int warp = threadIdx.x / Granularity;
+	__shared__ __align__(128) uint4 far[TPB_MTP / Granularity][Granularity * (Granularity + SHR_OFF)];
+	__shared__ __align__(32) uint32_t farIndex[TPB_MTP / Granularity][Granularity];
+
+
+	if (event_thread < threads)
+	{
+
+//		const uint8 *	 __restrict__ GBlock = &((uint8*)DBlock)[0];
+		uint8 YLocal;
+
+		uint16 DataChunk[2] = { 0 };
+
+
+		((uint8 *)DataChunk)[0] = ((uint8 *)pData)[0];
+		((uint8 *)DataChunk)[1] = ((uint8 *)pData)[1];
+	
+		((uint4*)DataChunk)[4] = ((uint4*)pData)[4];
+		((uint4*)DataChunk)[5] = ((uint4*)Elements)[0];
+
+		((uint16*)DataChunk)[1].hi.s0 = NonceIterator;
+
+		blake2b_compress2_256((uint2*)&YLocal, blakeFinal, (uint2*)DataChunk, 100);
+
+
+		bool init_blocks;
+		uint32_t unmatch_block;
+		//		uint32_t localIndex;
+		init_blocks = false;
+		unmatch_block = 0;
+
+		#pragma unroll 1
+		for (int j = 1; j <= mtp_L; j++)
+		{
+//			((ulonglong4*)DataChunk)[0] = YLocal;
+			#pragma unroll
+			for (int t = 0; t< Gran1; t++) {
+				uint4 *D = (uint4*)&YLocal;
+				FARLOAD(t + Gran3) = D[t];
+			}
+
+			farIndex[warp][lane] = ((uint32_t*)&YLocal)[0] & 0x3FFFFF;
+			__syncwarp(mask);
+
+			uint32_t len = 0;
+
+			uint16 DataTmp;
+			DataTmp = ((uint16*)blakeFinal)[0];
+
+
+			#pragma unroll 1
+			for (int i = 0; i < 9; i++) {
+				int last = (i == 8);
+
+				#pragma unroll
+				for (int t = 0; t< Gran1; t++) {
+					uint4 *D = (uint4*)&YLocal;
+					D[t] = FARLOAD(t + Gran3);
 				}
 
 
 				len += last ? 32 : 128;
 
-				//if(!last)
-				{
 
+				//					#pragma unroll 
+				for (int t = 0; t<Granularity; t++) {
 
-#pragma unroll 
-					for (int t = 0; t<8; t++) {
+					const uint4 * __restrict__ farP = &GBlock[farIndex[warp][t] * 64 + 0 + 8 * i + 0];
 
-						ulonglong2 *farP = (ulonglong2*)&GBlock[farIndex[warp][t] * 64 + 0 + 8 * i + 0];
-
-						far[warp][lane*(8 + SHR_OFF) + (t)] = (last) ? make_ulonglong2(0, 0) : farP[lane];
-					}
-
-					__syncwarp(mask);
+					far[warp][lane*(Granularity + SHR_OFF) + (t)] = (last) ? make_uint4(0, 0,0,0) : farP[lane];
 				}
 
-#pragma unroll
-				for (int t = 0; t<6; t++) {
-					ulonglong2 *D = (ulonglong2*)DataChunk;
-					D[t + 2] = (FARLOAD(t));
-				}
-				((uint16*)DataChunk)[0].lo = YLocal;
+				__syncwarp(mask);
 
-				//	uint16 DataTmp2;
-				blake2b_compress2b(/*(uint64_t*)&DataTmp2,*/ (uint64_t*)&DataTmp, (uint64_t*)DataChunk, len, last);
-				//	DataTmp = DataTmp2;
+
+				blake2b_compress2b_new((uint2*)&DataTmp, far[warp],(uint2*)&YLocal, len, last);
 
 
 			}
+	
+			YLocal = ((uint8*)&DataTmp)[0];
 
-			YLocal = DataTmp.lo;
 		}
 
 
 
-		if (YLocal.s7 <= pTarget[7])
-
+		if (((uint32_t*)&YLocal)[7] <= pTarget[7])
 		{
 			atomicMin(&SmallestNonce[0], NonceIterator);
-
 		}
 
 	}
@@ -792,6 +1377,8 @@ void mtp_cpu_init(int thr_id, uint32_t threads)
 	cudaSetDevice(device_map[thr_id]);
 	// just assign the device pointer allocated in main loop
 
+//	cudaMemcpyToSymbol(GYLocal,&hash1[thr_id], 8 * sizeof(uint32_t) * threads);
+//	cudaMalloc((void**)&GYLocal[thr_id], 8 * sizeof(uint32_t) * threads);
 
 	cudaMalloc((void**)&HBlock[thr_id], 256 * argon_memcost * sizeof(uint32_t));
 	cudaMalloc(&d_MinNonces[thr_id], sizeof(uint32_t));
@@ -816,7 +1403,7 @@ __host__
 void mtp_fill(uint32_t dev_id, const uint64_t *Block, uint32_t offset, uint32_t datachunk)
 {
 	cudaSetDevice(device_map[dev_id]);
-	uint4 *Blockptr = &HBlock[dev_id][offset * 64 * datachunk];
+	ulonglong2 *Blockptr = &HBlock[dev_id][offset * 64 * datachunk];
 	cudaError_t err = cudaMemcpyAsync(Blockptr, Block, datachunk * 256 * sizeof(uint32_t), cudaMemcpyHostToDevice);
 
 	if (err != cudaSuccess)
@@ -840,8 +1427,8 @@ uint32_t mtp_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce)
 
 	dim3 gridyloop(threads / tpb);
 	dim3 blockyloop(tpb);
-
-	mtp_yloop << < gridyloop, blockyloop >> >(thr_id, threads, startNounce, HBlock[thr_id], d_MinNonces[thr_id]);
+//	yloop_init << < gridyloop, blockyloop >> >(thr_id, threads, startNounce, GYLocal[thr_id]);
+	mtp_yloop << < gridyloop, blockyloop >> >(thr_id, threads, startNounce, (uint4*)HBlock[thr_id], d_MinNonces[thr_id]);
 
 
 	cudaMemcpy(h_MinNonces[thr_id], d_MinNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
@@ -1404,28 +1991,23 @@ __global__ void mtp_fc(uint32_t threads, uint4  *  DBlock, uint2 *a) {
 
 
 __host__ void get_tree(int thr_id, uint8_t* d) {
-	cudaSetDevice(device_map[thr_id]);
 	cudaMemcpy(d, buffer_a[thr_id], sizeof(uint2) * 2 * 1048576 * 4, cudaMemcpyDeviceToHost);
 }
 
-
 __host__ uint8_t* get_tree2(int thr_id) {
-	uint8_t *d;
+	uint8_t *d; 
 	cudaMallocHost(&d, sizeof(uint2) * 2 * 1048576 * 4);
 	cudaMemcpy(d, buffer_a[thr_id], sizeof(uint2) * 2 * 1048576 * 4, cudaMemcpyDeviceToHost);
 	return d;
 }
 
 
-
-
 __host__ void get_block(int thr_id, void* d, uint32_t index) {
-	cudaSetDevice(device_map[thr_id]);
 	cudaMemcpy(d, &HBlock[thr_id][64 * index], sizeof(uint64_t) * 128, cudaMemcpyDeviceToHost);
 }
 __host__ void mtp_i_cpu(int thr_id, uint32_t *block_header) {
 
-	cudaSetDevice(device_map[thr_id]);
+
 	cudaError_t err = cudaMemcpy(Header[thr_id], block_header, 8 * sizeof(uint32_t), cudaMemcpyHostToDevice);
 	if (err != cudaSuccess)
 	{
@@ -1439,19 +2021,19 @@ __host__ void mtp_i_cpu(int thr_id, uint32_t *block_header) {
 	//        for(int i=0;i<4;i++)
 	//                mtp_i << <grid, block>> >(HBlock[thr_id],Header[thr_id],i);
 
-	mtp_i<0> << <grid, block >> >(HBlock[thr_id], Header[thr_id]);
+	mtp_i<0> << <grid, block >> >((uint4*)HBlock[thr_id], Header[thr_id]);
 	cudaDeviceSynchronize();
-	mtp_i<1> << <grid, block >> >(HBlock[thr_id], Header[thr_id]);
+	mtp_i<1> << <grid, block >> >((uint4*)HBlock[thr_id], Header[thr_id]);
 	cudaDeviceSynchronize();
-	mtp_i<2> << <grid, block >> >(HBlock[thr_id], Header[thr_id]);
+	mtp_i<2> << <grid, block >> >((uint4*)HBlock[thr_id], Header[thr_id]);
 	cudaDeviceSynchronize();
-	mtp_i<3> << <grid, block >> >(HBlock[thr_id], Header[thr_id]);
+	mtp_i<3> << <grid, block >> >((uint4*)HBlock[thr_id], Header[thr_id]);
 	cudaDeviceSynchronize();
 
 	tpb = 256;
 	dim3 grid2(1048576 * 4 / tpb);
 	dim3 block2(tpb);
-	mtp_fc << <grid2, block2 >> >(1048576 * 4, HBlock[thr_id], buffer_a[thr_id]);
+	mtp_fc << <grid2, block2 >> >(1048576 * 4, (uint4*)HBlock[thr_id], buffer_a[thr_id]);
 	cudaDeviceSynchronize();
 	/*
 	tpb=256;
@@ -1464,7 +2046,7 @@ __host__ void mtp_i_cpu(int thr_id, uint32_t *block_header) {
 __host__
 void mtp_fill_1b(int thr_id, uint64_t *Block, uint32_t block_nr)
 {
-	uint4 *Blockptr = &HBlock[thr_id][block_nr * 64];
+	ulonglong2 *Blockptr = &HBlock[thr_id][block_nr * 64];
 	cudaError_t err = cudaMemcpy(Blockptr, Block, 256 * sizeof(uint32_t), cudaMemcpyHostToDevice);
 	if (err != cudaSuccess)
 	{

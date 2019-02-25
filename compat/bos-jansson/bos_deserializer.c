@@ -174,7 +174,7 @@ static char *read_raw_string(buffer_t *buffer) {
 	size_t len = read_uvarint(buffer);
 
 	if (len > 0) {
-		char *utf8String = (char*)jsonp_malloc(sizeof(char) * len);
+		char *utf8String = (char*)jsonp_malloc(sizeof(char) * len + 1);
 		read_buffer(buffer, utf8String, sizeof(char) * len);
 		memset(utf8String + len, (char)0, sizeof(char));
 		return utf8String;
@@ -185,7 +185,10 @@ static char *read_raw_string(buffer_t *buffer) {
 }
 
 static json_t *read_string(buffer_t *buffer) {
-	return json_string(read_raw_string(buffer));
+	char *str = read_raw_string(buffer);
+	json_t *ret = json_string(str);
+	free(str);
+	return ret;
 }
 
 static json_t *read_bytes(buffer_t *buffer) {
@@ -225,6 +228,7 @@ static json_t *read_obj(buffer_t *buffer, json_error_t *error) {
 			return NULL;
 
 		json_object_set(&object->json, key, entry);
+		free(key);
 	}
 
 	return &object->json;

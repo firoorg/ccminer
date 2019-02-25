@@ -941,7 +941,6 @@ json_t *json_bytes(void *value, size_t size)
     if(!bytes)
         return NULL;
     json_init(&bytes->json, JSON_BYTES);
-
     bytes->value = value;
     bytes->size = size;
     return &bytes->json;

@@ -88,7 +88,10 @@ int strbuffer_append_bytes(strbuffer_t *strbuff, const char *data, size_t size)
         memcpy(new_value, strbuff->value, strbuff->length);
 
         jsonp_free(strbuff->value);
+		
+//		realloc(strbuff->value,new_size);
         strbuff->value = new_value;
+//		memcpy(strbuff->value,new_value, new_size);
         strbuff->size = new_size;
     }
 

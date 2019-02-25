@@ -157,35 +157,32 @@ if (JobId[thr_id] != work->data[17] || XtraNonce2[thr_id] != ((uint64_t*)work->x
 
 		free_memory(&context[thr_id], (unsigned char *)instance[thr_id].memory, instance[thr_id].memory_blocks, sizeof(block));
 		ordered_tree[thr_id]->Destructor();
-		cudaFreeHost(dx[thr_id]);
-//		ordered_tree[thr_id].Destructor();
+		cudaFreeHost(dx[device_map[thr_id]]);
 
 		delete  ordered_tree[thr_id];
 
 	}
-	cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
+	cudaMallocHost(&dx[device_map[thr_id]], sizeof(uint2) * 2 * 1048576 * 4);
 	context[thr_id] = init_argon2d_param((const char*)endiandata);
 
 	argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
-
+	mtp_fill_1b(thr_id, instance[thr_id].memory[0 + 0].v, 0 + 0);
+	mtp_fill_1b(thr_id, instance[thr_id].memory[0 + 1].v, 0 + 1);
+	mtp_fill_1b(thr_id, instance[thr_id].memory[2 + 0].v, 1048576 + 0);
+	mtp_fill_1b(thr_id, instance[thr_id].memory[2 + 1].v, 1048576 + 1);
+	mtp_fill_1b(thr_id, instance[thr_id].memory[4 + 0].v, 2097152 + 0);
+	mtp_fill_1b(thr_id, instance[thr_id].memory[4 + 1].v, 2097152 + 1);
+	mtp_fill_1b(thr_id, instance[thr_id].memory[6 + 0].v, 3145728 + 0);
+	mtp_fill_1b(thr_id, instance[thr_id].memory[6 + 1].v, 3145728 + 1);
 	mtp_i_cpu(thr_id, instance[thr_id].block_header);
 
-	printf("Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory \n");
+//	printf("Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory \n");
 
-	get_tree(thr_id,dx[thr_id]);
-	printf("Step 2 : Compute the root Φ of the Merkle hash tree \n");
+	get_tree(thr_id,dx[device_map[thr_id]]);
+//	printf("Step 2 : Compute the root Φ of the Merkle hash tree \n");
 //sleep(10);
-	ordered_tree[thr_id] = new MerkleTree(dx[thr_id], true);
-/*
-printf("after ordered tree\n");
-sleep(10);
-printf("delete ordered tree\n");
-ordered_tree[thr_id]->Destructor();
-//delete ordered_tree[thr_id];
-sleep(10);
-printf("deleted ordered tree\n");
-sleep(30);
-*/
+	ordered_tree[thr_id] = new MerkleTree(dx[device_map[thr_id]], true);
+ 
 	JobId[thr_id] = work->data[17];
 	XtraNonce2[thr_id] = ((uint64_t*)work->xnonce2)[0];
 	MerkleTree::Buffer root = ordered_tree[thr_id]->getRoot();
