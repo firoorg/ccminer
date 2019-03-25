@@ -3415,7 +3415,10 @@ printf("*******************freeing gpu ressource here ***********************\n"
 			rc = scanhash_qubit(thr_id, &work, max_nonce, &hashes_done);
 			break;
 		case ALGO_MTP:
-			rc = scanhash_mtp(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, &mtp,&stratum);
+		if (!have_stratum)
+			rc = scanhash_mtp_solo(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, &mtp,&stratum);
+		else 
+			rc = scanhash_mtp(opt_n_threads, thr_id, &work, max_nonce, &hashes_done, &mtp, &stratum);
 //			pthread_mutex_lock(&stratum_work_lock);
 //			stratum.job.IncXtra = true;
 //			pthread_mutex_unlock(&stratum_work_lock);

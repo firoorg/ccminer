@@ -2003,11 +2003,12 @@ __host__ uint8_t* get_tree2(int thr_id) {
 
 
 __host__ void get_block(int thr_id, void* d, uint32_t index) {
+	cudaSetDevice(device_map[thr_id]);
 	cudaMemcpy(d, &HBlock[thr_id][64 * index], sizeof(uint64_t) * 128, cudaMemcpyDeviceToHost);
 }
 __host__ void mtp_i_cpu(int thr_id, uint32_t *block_header) {
 
-
+	cudaSetDevice(device_map[thr_id]);
 	cudaError_t err = cudaMemcpy(Header[thr_id], block_header, 8 * sizeof(uint32_t), cudaMemcpyHostToDevice);
 	if (err != cudaSuccess)
 	{
@@ -2046,6 +2047,7 @@ __host__ void mtp_i_cpu(int thr_id, uint32_t *block_header) {
 __host__
 void mtp_fill_1b(int thr_id, uint64_t *Block, uint32_t block_nr)
 {
+	cudaSetDevice(device_map[thr_id]);
 	ulonglong2 *Blockptr = &HBlock[thr_id][block_nr * 64];
 	cudaError_t err = cudaMemcpy(Blockptr, Block, 256 * sizeof(uint32_t), cudaMemcpyHostToDevice);
 	if (err != cudaSuccess)

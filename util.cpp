@@ -1204,10 +1204,8 @@ static void stratum_buffer_append_bos(struct stratum_ctx *sctx, const char *s,si
 	if (snew >= sctx->sockbuf_size) {
 		sctx->sockbuf_size = snew + (RBUFSIZE - (snew % RBUFSIZE));
 	}
-//		sctx->sockbuf = (char*)realloc(sctx->sockbuf, sctx->sockbuf_size);
-		sctx->sockbuf = (char*)realloc(sctx->sockbuf, sctx->sockbuf_bossize + size_mess);
-//	}
 
+	sctx->sockbuf = (char*)realloc(sctx->sockbuf, sctx->sockbuf_bossize + size_mess);
 	memcpy(sctx->sockbuf + sctx->sockbuf_bossize , s,size_mess);
 	sctx->sockbuf_bossize += size_mess; 
 
@@ -1374,8 +1372,6 @@ json_t* recode_message(json_t *MyObject2)
 	return MyObject;
 }
 
-
-
 void stratum_bos_fillbuffer(struct stratum_ctx *sctx)
 {
 	int timeout = opt_timeout;
@@ -1489,7 +1485,7 @@ out:
 	return MyObject;
 }
 
-char *stratum_recv_line_boschar(struct stratum_ctx *sctx)
+char *  stratum_recv_line_boschar(struct stratum_ctx *sctx)
 {
 
 	json_t *MyObject2 = json_object();
@@ -1593,7 +1589,7 @@ out:
 	return json_dumps(MyObject, 0);
 }
 
-bool stratum_recv_line_compact(struct stratum_ctx *sctx)
+bool    stratum_recv_line_compact(struct stratum_ctx *sctx)
 {
 
 	json_t *MyObject2 = json_object();
