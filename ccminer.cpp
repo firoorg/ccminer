@@ -1228,8 +1228,10 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 				data_str, mtphashvalue_str, mtpreserved_str, merkleroot_str, blockmtp_str, proofmtp_str, work->txs);
 		}
 
-		//	val = json_rpc_call(curl, rpc_url, rpc_userpass, req, NULL, 0);
+//		val = json_rpc_call(curl, rpc_url, rpc_userpass, req, NULL, 0);
+//		printf("work->txs=%s\n",work->txs);
 		val = json_rpc_call_pool(curl, pool, req, false, false, NULL);
+//		printf("not submitting block\n");
 		free(req);
 		if (unlikely(!val)) {
 			applog(LOG_ERR, "submit_upstream_work json_rpc_call failed");
@@ -1590,6 +1592,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 	json_t *mnval;
 	json_t *mnamount;
 	json_t *mnaddy;
+	json_t *mnscript;
 	bool rc = false;
 
 	tmp = json_object_get(val, "mutable");
@@ -1721,10 +1724,12 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		mnval = json_object_get(val, "znode");
 			mnamount = json_object_get(mnval,"amount");
 			mnaddy = json_object_get(mnval, "payee");
-/*
+			mnscript = json_object_get(mnval, "script");
+
 		printf("mn addy %s", json_string_value(mnaddy));
 		printf("mn amount %d", json_integer_value(mnamount));
-*/
+		printf("mn script %d", json_string_value(mnscript));
+
 		}
 
 		cbvalue = (int64_t)(json_is_integer(tmp) ? json_integer_value(tmp) : json_number_value(tmp));
@@ -1775,6 +1780,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 
 
 		  // for mainnet
+
 		base58_decode("aCAgTPgtYcA4EysU4UKC86EQd5cTtHtCcr", script_payee);
 		job_pack_tx(coinb1, 50000000, script_payee);
 
@@ -1789,7 +1795,8 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 
 		base58_decode("a1kCCGddf5pMXSipLVD9hBG2MGGVNaJ15U", script_payee);
 		job_pack_tx(coinb5, 50000000, script_payee);
-		/*
+
+/*		
 		// for testnet with znode payment
 		base58_decode("TDk19wPKYq91i18qmY6U9FeTdTxwPeSveo", script_payee);
 		job_pack_tx(coinb1, 50000000, script_payee);
@@ -1805,13 +1812,19 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 
 		base58_decode("TCsTzQZKVn4fao8jDmB9zQBk9YQNEZ3XfS", script_payee);
 		job_pack_tx(coinb5, 50000000, script_payee);
-		*/
-
-		
+*/		
+	
 		if (mpay && json_integer_value(mnamount)!=0) {
 		base58_decode((char*)json_string_value(mnaddy), script_payee);
+//		memcpy(script_payee, json_string_value(mnscript),strlen(json_string_value(mnscript)));
 		job_pack_tx(coinb6, json_integer_value(mnamount), script_payee);
 		}
+
+/*
+		"payee": "TQd92H738k7QpEpYPrEFrHDoawsJjW4XhT",
+			"script" : "76a914a0be3efc7cec6597a0c1c01037fc19e99c7b707f88ac",
+			"amount" : 750000000
+*/
 
 		strcat(coinb7, "00000000"); // locktime
 
