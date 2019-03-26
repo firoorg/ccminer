@@ -1725,11 +1725,11 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 			mnamount = json_object_get(mnval,"amount");
 			mnaddy = json_object_get(mnval, "payee");
 			mnscript = json_object_get(mnval, "script");
-
+/*
 		printf("mn addy %s", json_string_value(mnaddy));
 		printf("mn amount %d", json_integer_value(mnamount));
 		printf("mn script %d", json_string_value(mnscript));
-
+*/
 		}
 
 		cbvalue = (int64_t)(json_is_integer(tmp) ? json_integer_value(tmp) : json_number_value(tmp));
