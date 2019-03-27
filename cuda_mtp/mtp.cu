@@ -295,13 +295,17 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 {
 
 	unsigned char mtpHashValue[32];
-
+	struct timeval tv_start, tv_end, hdiff;
+	
+	
+	
 	//if (JobId==0)
 	//	pthread_barrier_init(&barrier, NULL, nthreads);
 
 
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
+	
 	const uint32_t first_nonce = pdata[19];
 	int real_maxnonce = UINT32_MAX / nthreads * (thr_id + 1);
 	if (opt_benchmark)
@@ -323,7 +327,7 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 		throughput = cuda_default_throughput(thr_id, 1U << intensity); // 18=256*256*4;
 																	   //		throughput =  1024*64;
 		if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
-
+		
 		cudaDeviceProp props;
 		cudaGetDeviceProperties(&props, dev_id);
 
@@ -347,7 +351,6 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 
 	for (int k = 0; k < 20; k++)
 		endiandata[k] = pdata[k];
-
 
 
 	if (JobId[thr_id] != work->data[17] || XtraNonce2[thr_id] != ((uint64_t*)work->xnonce2)[0]) {
@@ -396,6 +399,10 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 
 
 	if (work_restart[thr_id].restart) goto TheEnd;
+
+	gettimeofday(&tv_start, NULL);
+	uint64_t TotHash = 0;
+
 	pdata[19] = first_nonce;
 	do {
 		//		printf("work->data[17]=%08x\n", work->data[17]);
@@ -403,7 +410,7 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
 		foundNonce = mtp_cpu_hash_32(thr_id, throughput, pdata[19]);
-
+		
 		uint32_t _ALIGN(64) vhash64[8];
 		if (foundNonce != UINT32_MAX)
 		{
@@ -456,6 +463,19 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 		break;
 		}
 		*/
+		gettimeofday(&tv_end, NULL);
+		timeval_subtract(&hdiff, &tv_end, &tv_start);
+		TotHash += throughput;
+		double hashrate = 0.0;
+		if (hdiff.tv_usec || hdiff.tv_sec) {
+			double dtime = (double)hdiff.tv_sec + 1e-6 * hdiff.tv_usec;
+			if (dtime > 0.0) {
+				hashrate = TotHash / dtime;
+			}
+		}
+	if ( ((TotHash/throughput) % 500) == 0)
+	gpulog(LOG_INFO, thr_id, "%s: %.1f Kh/s", device_name[device_map[thr_id]], hashrate / 1000.);
+
 		pdata[19] += throughput;
 		if (pdata[19] >= real_maxnonce) {
 			gpulog(LOG_WARNING, thr_id, "OUT OF NONCE %x >= %x incrementing extra nonce at next chance", pdata[19], real_maxnonce);

@@ -72,7 +72,7 @@ double stats_get_speed(int thr_id, double def_speed)
 			if (i->second.hashcount > 1000) {
 				speed += i->second.hashrate;
 				records++;
-				// applog(LOG_BLUE, "%d %x %.1f", thr_id, i->second.thr_id, i->second.hashrate);
+			//	 applog(LOG_BLUE, "%d %x %.1f", thr_id, i->second.thr_id, i->second.hashrate);
 			}
 		}
 		++i;
