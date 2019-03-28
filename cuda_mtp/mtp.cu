@@ -51,6 +51,8 @@ extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t
 
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
+
+
 	const uint32_t first_nonce = pdata[19];
 	int real_maxnonce = UINT32_MAX / nthreads * (thr_id + 1);
 	if (opt_benchmark)
@@ -302,12 +304,13 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 	//if (JobId==0)
 	//	pthread_barrier_init(&barrier, NULL, nthreads);
 
-
+	uint64_t TotHash = 0;
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
-	
-	const uint32_t first_nonce = pdata[19];
+
+	uint32_t first_nonce = pdata[19];
 	int real_maxnonce = UINT32_MAX / nthreads * (thr_id + 1);
+	first_nonce += UINT32_MAX / nthreads * (thr_id);
 	if (opt_benchmark)
 		ptarget[7] = 0x00ff;
 
@@ -401,7 +404,7 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 	if (work_restart[thr_id].restart) goto TheEnd;
 
 	gettimeofday(&tv_start, NULL);
-	uint64_t TotHash = 0;
+	TotHash = 0;
 
 	pdata[19] = first_nonce;
 	do {
@@ -473,8 +476,8 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 				hashrate = TotHash / dtime;
 			}
 		}
-	if ( ((TotHash/throughput) % 500) == 0)
-	gpulog(LOG_INFO, thr_id, "%s: %.1f Kh/s", device_name[device_map[thr_id]], hashrate / 1000.);
+	if ( ((TotHash/throughput) % 100) == 0)
+	gpulog(LOG_INFO, thr_id, "%s: %.1f Kh/s nonce %08x ", device_name[device_map[thr_id]], hashrate / 1000., pdata[19]);
 
 		pdata[19] += throughput;
 		if (pdata[19] >= real_maxnonce) {

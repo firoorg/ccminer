@@ -820,7 +820,12 @@ int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 		char hex_tmp[64];
 
 		if (Y[L] > hashTarget) {
-
+			// Found a solution
+						printf("False positive. Nonce=%08x Hash:", TheNonce);
+						for (int n = 0; n < 32; n++) {
+							printf("%02x", ((unsigned char*)&Y[0])[n]);
+						}
+						printf("\n");
 		}
 		else {
 			for (int i = 0; i<32; i++)

@@ -3087,7 +3087,7 @@ static void *miner_thread(void *userdata)
 		
 		} else {
 			nonceptr[0]++; //??
-		
+//			nonceptr[0] = (UINT32_MAX / opt_n_threads) * thr_id; // 0 if single thr
 		}
 		if (opt_algo == ALGO_DECRED) {
 			// suprnova job_id check without data/target/height change...

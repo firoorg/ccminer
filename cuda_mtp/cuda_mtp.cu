@@ -1254,7 +1254,7 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 
 
 
-		if (((uint32_t*)&YLocal)[7] <= pTarget[7])
+		if (((uint64_t*)&YLocal)[3] <= ((uint64_t*)pTarget)[3])
 		{
 			atomicMin(&SmallestNonce[0], NonceIterator);
 		}
