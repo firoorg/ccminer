@@ -1582,20 +1582,7 @@ __device__ __forceinline__ uint32_t index_alpha(const uint32_t pass, const uint3
 	* relative position */
 	relative_position = pseudo_rand;
 	//__syncwarp();
-	relative_position = _HIDWORD(relative_position * relative_position);//relative_position * relative_position >> 32;
-																		//printf("%x %lx %x %d\n",(uint32_t)__mulhi(pseudo_rand,pseudo_rand), relative_position, pseudo_rand, threadIdx.x);
-
-																		//	relative_position = MAKE_ULONGLONG(__mulhi((int)pseudo_rand,(int)pseudo_rand),0);
-																		/*
-																		unsigned int a, b, prod_hi, prod_lo;
-																		unsigned long long int prod;
-																		a = 0x31415926;
-																		b = 0x53589793;
-																		prod_lo = a * b;
-																		prod_hi = __umulhi(a, b);
-																		prod = (unsigned long long int)a * b;
-																		printf ("prod_hi_lo = %08x_%08x  prod=%016llx\n", prod_hi, prod_lo, prod);
-																		*/
+	relative_position = _HIDWORD(relative_position * relative_position);
 
 	relative_position = reference_area_size - 1 -
 		_HIDWORD(reference_area_size * relative_position);

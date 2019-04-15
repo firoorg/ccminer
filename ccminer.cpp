@@ -590,7 +590,7 @@ static void calc_network_diff(struct work *work)
 {
 	// sample for diff 43.281 : 1c05ea29
 	// todo: endian reversed on longpoll could be zr5 specific...
-	uint32_t nbits = have_longpoll ? work->data[18] : swab32(work->data[18]);
+	uint32_t nbits = (have_longpoll | opt_algo == ALGO_MTP )? work->data[18] : swab32(work->data[18]);
 	if (opt_algo == ALGO_LBRY) nbits = swab32(work->data[26]);
 	if (opt_algo == ALGO_DECRED) nbits = work->data[29];
 	if (opt_algo == ALGO_SIA) nbits = work->data[11]; // unsure if correct
@@ -599,8 +599,8 @@ static void calc_network_diff(struct work *work)
 	int16_t shift = (swab32(nbits) & 0xff); // 0x1c = 28
 
 	uint64_t diffone = 0x0000FFFF00000000ull;
+//	double d = (double)0x0000ffff / (double)bits;
 	double d = (double)0x0000ffff / (double)bits;
-
 	for (int m=shift; m < 29; m++) d *= 256.0;
 	for (int m=29; m < shift; m++) d /= 256.0;
 	if (opt_algo == ALGO_DECRED && shift == 28) d *= 256.0;
@@ -2770,7 +2770,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	switch (opt_algo) {
 		case ALGO_MTP:
-				work_set_target_mtp(work, sctx->next_target);
+				work_set_target_mtp(work, sctx->next_target, sctx->job.diff);
 			break;
 		case ALGO_JACKPOT:
 		case ALGO_NEOSCRYPT:
@@ -3831,7 +3831,7 @@ longpoll_retry:
 						sprintf(&netinfo[strlen(netinfo)], ", target %.3f", g_work.targetdiff);
 					}
 					if (g_work.height)
-						applog(LOG_BLUE, "%s block %u%s", algo_names[opt_algo], g_work.height, netinfo);
+						applog(LOG_BLUE, "%s block %u %s", algo_names[opt_algo], g_work.height, netinfo);
 					else
 						applog(LOG_BLUE, "%s detected new block%s", short_url, netinfo);
 //				}
@@ -4965,8 +4965,8 @@ int main(int argc, char *argv[])
 	printf("  Include algos from alexis78, djm34, sp, tsiv and klausT.\n");
 	printf("  *** News (07/06/2018): MTP algo for ZCoin \n\n");
 	printf("  MTP algo based on krnlx kernel\n\n");
-	printf("BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze (djm34)\n");
-	printf("ZCoin donation address: aChWVb8CpgajadpLmiwDZvZaKizQgHxfh5 (djm34)\n\n");
+	printf("  BTC donation address: 1NENYmxwZGHsKFmyjTc5WferTn5VTFb7Ze (djm34)\n");
+	printf("  ZCoin donation address: aChWVb8CpgajadpLmiwDZvZaKizQgHxfh5 (djm34)\n\n");
 
 	rpc_user = strdup("");
 	rpc_pass = strdup("");

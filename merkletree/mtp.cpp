@@ -832,11 +832,13 @@ int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 				mtpHashValue[i] = (((unsigned char*)(&Y[L]))[i]);
 
 			// Found a solution
-//			printf("Found a solution. Nonce=%08x Hash:", TheNonce);
-//			for (int n = 0; n < 32; n++) {
-//				printf("%02x", ((unsigned char*)&Y[0])[n]);
-//			}
-//			printf("\n");
+/*
+			printf("Found a solution. Nonce=%08x Hash:", TheNonce);
+			for (int n = 0; n < 32; n++) {
+				printf("%02x", ((unsigned char*)&Y[L])[n]);
+			}
+			printf("\n");
+*/
 			return 1;
 
 

@@ -603,7 +603,7 @@ extern int timeval_subtract(struct timeval *result, struct timeval *x,
 extern bool fulltest(const uint32_t *hash, const uint32_t *target);
 void diff_to_target(uint32_t* target, double diff);
 void work_set_target(struct work* work, double diff);
-void work_set_target_mtp(struct work* work, uchar* target);
+void work_set_target_mtp(struct work* work, uchar* target, double diff);
 double target_to_diff(uint32_t* target);
 extern void get_currentalgo(char* buf, int sz);
 

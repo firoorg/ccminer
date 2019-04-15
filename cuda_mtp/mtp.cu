@@ -70,7 +70,7 @@ extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 //		cudaSetDeviceFlags(cudaDeviceScheduleYield);
 //		cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte);
-		int intensity = 21;
+		int intensity = 20;
 		throughput = cuda_default_throughput(thr_id, 1U << intensity); // 18=256*256*4;
 //		throughput =  1024*64;
 		if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
@@ -240,8 +240,9 @@ fillGpu[thr_id]=false;
 			uint32_t is_sol = mtp_solver(thr_id,foundNonce, &instance[thr_id], nBlockMTP,nProofMTP, TheMerkleRoot[thr_id], mtpHashValue, *ordered_tree[thr_id], endiandata,TheUint256Target[0]);
 
 			if (is_sol==1 /*&& fulltest(vhash64, ptarget)*/) {
+
 				int res = 1;
-				work_set_target_ratio(work, vhash64);		
+				work_set_target_ratio(work, (uint32_t*)mtpHashValue);
 
 				pdata[19] =/*swab32*/(foundNonce);
 
@@ -269,7 +270,7 @@ fillGpu[thr_id]=false;
 			}
 		}
 
-		work_set_target_ratio(work, vhash64);
+//		work_set_target_ratio(work, vhash64);
 		
 /*
 		if ((uint64_t)throughput + pdata[19] >= max_nonce) {
@@ -326,7 +327,7 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 		//		cudaSetDeviceFlags(cudaDeviceScheduleYield);
 		//		cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte);
-		int intensity = 21;
+		int intensity = 20;
 		throughput = cuda_default_throughput(thr_id, 1U << intensity); // 18=256*256*4;
 																	   //		throughput =  1024*64;
 		if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
@@ -428,8 +429,10 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 			uint32_t is_sol = mtp_solver(thr_id, foundNonce, &instance[thr_id], nBlockMTP, nProofMTP, TheMerkleRoot[thr_id], mtpHashValue, *ordered_tree[thr_id], endiandata, TheUint256Target[0]);
 
 			if (is_sol == 1 /*&& fulltest(vhash64, ptarget)*/) {
+
+
 				int res = 1;
-				work_set_target_ratio(work, vhash64);
+				work_set_target_ratio(work,(uint32_t*) mtpHashValue);
 
 				pdata[19] =/*swab32*/(foundNonce);
 
@@ -458,7 +461,7 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 			}
 		}
 
-		work_set_target_ratio(work, vhash64);
+	//	work_set_target_ratio(work, vhash64);
 
 		/*
 		if ((uint64_t)throughput + pdata[19] >= max_nonce) {
@@ -476,8 +479,8 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 				hashrate = TotHash / dtime;
 			}
 		}
-	if ( ((TotHash/throughput) % 100) == 0)
-	gpulog(LOG_INFO, thr_id, "%s: %.1f Kh/s nonce %08x ", device_name[device_map[thr_id]], hashrate / 1000., pdata[19]);
+//	if ( ((TotHash/throughput) % 100) == 0)
+//	gpulog(LOG_INFO, thr_id, "%s: %.1f Kh/s nonce %08x ", device_name[device_map[thr_id]], hashrate / 1000., pdata[19]);
 
 		pdata[19] += throughput;
 		if (pdata[19] >= real_maxnonce) {

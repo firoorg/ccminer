@@ -69,6 +69,8 @@ extern "C" double bn_hash_target_ratio(uint32_t* hash, uint32_t* target)
 	memcpy(&h, (void*) hash, 32);
 
 	dhash = h.getdouble();
+
+
 	if (dhash > 0.)
 		return t.getdouble() / dhash;
 	else
@@ -85,6 +87,8 @@ extern "C" void bn_store_hash_target_ratio(uint32_t* hash, uint32_t* target, str
 
 	work->shareratio[nonce] = bn_hash_target_ratio(hash, target);
 	work->sharediff[nonce] = work->targetdiff * work->shareratio[nonce];
+
+
 }
 
 // new method to save all nonce(s) share diff/ration

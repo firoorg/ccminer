@@ -1031,11 +1031,12 @@ void work_set_target(struct work* work, double diff)
 	work->targetdiff = diff;
 }
 
-void work_set_target_mtp(struct work* work, uchar* target)
+void work_set_target_mtp(struct work* work, uchar* target,double diff)
 {
 	for (int i = 0; i<8; i++)
 		work->target[i] = ((uint32_t*)target)[i];
-
+	diff_to_target(work->target, diff);
+	work->targetdiff = diff;
 
 }
 
@@ -2705,14 +2706,41 @@ static bool stratum_set_difficulty(struct stratum_ctx *sctx, json_t *params)
 	return true;
 }
 
+static double le256todouble(unsigned char* target)
+{
+	const double bits192 = 6277101735386680763835789423207666416102355444464034512896.0;
+	const double bits128 = 340282366920938463463374607431768211456.0;
+	const double bits64 = 18446744073709551616.0;
+# define le64toh(x) (x)
+	uint64_t *data64;
+	double dcut64;
+
+	data64 = (uint64_t *)((unsigned char *)target + 24);
+	dcut64 = le64toh(*data64) * bits192;
+
+	data64 = (uint64_t *)((unsigned char *)target + 16);
+	dcut64 += le64toh(*data64) * bits128;
+
+	data64 = (uint64_t *)((unsigned char *)target + 8);
+	dcut64 += le64toh(*data64) * bits64;
+
+	data64 = (uint64_t *)target;
+	dcut64 += le64toh(*data64);
+
+#undef le64toh
+	return dcut64;
+
+}
+
 static bool stratum_set_target(struct stratum_ctx *sctx, json_t *params)
 {
 	unsigned char* target;
-
+	double truediffone = 26959535291011309493156476344723991336010898738574164086137773096960.0;
 	target = (unsigned char*)json_bytes_value(json_array_get(params, 0));
-
+	double diff = (truediffone * 1) / le256todouble(target);
 	pthread_mutex_lock(&stratum_work_lock);
 	sctx->next_target = target;
+	sctx->next_diff = diff;
 	pthread_mutex_unlock(&stratum_work_lock);
 
 	return true;
