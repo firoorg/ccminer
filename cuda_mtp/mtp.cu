@@ -479,8 +479,8 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 				hashrate = TotHash / dtime;
 			}
 		}
-//	if ( ((TotHash/throughput) % 100) == 0)
-//	gpulog(LOG_INFO, thr_id, "%s: %.1f Kh/s nonce %08x ", device_name[device_map[thr_id]], hashrate / 1000., pdata[19]);
+	if ( ((TotHash/throughput) % 100) == 0)
+	gpulog(LOG_INFO, thr_id, "%s: %.1f Kh/s nonce %08x ", device_name[device_map[thr_id]], hashrate / 1000., pdata[19]);
 
 		pdata[19] += throughput;
 		if (pdata[19] >= real_maxnonce) {

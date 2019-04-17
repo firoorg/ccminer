@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="urn:schemas-microsoft-com:office:spreadsheet">
+<Styles>
+<Style ss:ID="GeneralDate">
+<NumberFormat ss:Format="General Date"/>
+</Style>
+</Styles>
+<Worksheet ss:Name="Worksheet1">
+<Table>
+<Column ss:Width="102"></Column><Column ss:Width="68"></Column><Column ss:Width="83"></Column><Column ss:Width="62"></Column><Row>
+<Cell ss:Index="1"><Data ss:Type="String">Function Name</Data></Cell><Cell ss:Index="2"><Data ss:Type="String">Threads</Data></Cell><Cell ss:Index="3"><Data ss:Type="String">Duration
+(μs)</Data></Cell><Cell ss:Index="4"><Data ss:Type="String">Device
+ID</Data></Cell></Row>
+<Row>
+<Cell  ss:Index="1"><Data ss:Type="String">mtp_yloop</Data></Cell><Cell  ss:Index="2"><Data ss:Type="Number">536870720</Data></Cell><Cell  ss:Index="3"><Data ss:Type="Number">163341799.309</Data></Cell><Cell  ss:Index="4"><Data ss:Type="Number">0</Data></Cell></Row>
+<Row>
+<Cell  ss:Index="1"><Data ss:Type="String">mtp_yloop</Data></Cell><Cell  ss:Index="2"><Data ss:Type="Number">536870720</Data></Cell><Cell  ss:Index="3"><Data ss:Type="Number">163934720.664</Data></Cell><Cell  ss:Index="4"><Data ss:Type="Number">0</Data></Cell></Row>
+<Row>
+<Cell  ss:Index="1"><Data ss:Type="String">mtp_yloop</Data></Cell><Cell  ss:Index="2"><Data ss:Type="Number">536870720</Data></Cell><Cell  ss:Index="3"><Data ss:Type="Number">163966159.495</Data></Cell><Cell  ss:Index="4"><Data ss:Type="Number">0</Data></Cell></Row>
+<Row>
+<Cell  ss:Index="1"><Data ss:Type="String">mtp_yloop</Data></Cell><Cell  ss:Index="2"><Data ss:Type="Number">536870720</Data></Cell><Cell  ss:Index="3"><Data ss:Type="Number">163997045.883</Data></Cell><Cell  ss:Index="4"><Data ss:Type="Number">0</Data></Cell></Row>
+<Row>
+<Cell  ss:Index="1"><Data ss:Type="String">mtp_yloop</Data></Cell><Cell  ss:Index="2"><Data ss:Type="Number">536870720</Data></Cell><Cell  ss:Index="3"><Data ss:Type="Number">164035665.179</Data></Cell><Cell  ss:Index="4"><Data ss:Type="Number">0</Data></Cell></Row>
+<Row>
+<Cell  ss:Index="1"><Data ss:Type="String">mtp_yloop</Data></Cell><Cell  ss:Index="2"><Data ss:Type="Number">536870720</Data></Cell><Cell  ss:Index="3"><Data ss:Type="Number">164014519.94</Data></Cell><Cell  ss:Index="4"><Data ss:Type="Number">0</Data></Cell></Row>
+</Table>
+<AutoFilter x:Range="R1C1:R1C4" xmlns="urn:schemas-microsoft-com:office:excel"></AutoFilter>
+</Worksheet>
+</Workbook>

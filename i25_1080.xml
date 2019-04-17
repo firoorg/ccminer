@@ -1,0 +1,279 @@
+﻿<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+  <Version>16.00</Version>
+ </DocumentProperties>
+ <OfficeDocumentSettings xmlns="urn:schemas-microsoft-com:office:office">
+  <AllowPNG/>
+ </OfficeDocumentSettings>
+ <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+  <WindowHeight>12190</WindowHeight>
+  <WindowWidth>32767</WindowWidth>
+  <WindowTopX>32767</WindowTopX>
+  <WindowTopY>32767</WindowTopY>
+  <ProtectStructure>False</ProtectStructure>
+  <ProtectWindows>False</ProtectWindows>
+ </ExcelWorkbook>
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Bottom"/>
+   <Borders/>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#000000"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Worksheet1">
+  <Names>
+   <NamedRange ss:Name="_FilterDatabase" ss:RefersTo="=Worksheet1!R1C1:R1C4"
+    ss:Hidden="1"/>
+  </Names>
+  <Table ss:ExpandedColumnCount="8" ss:ExpandedRowCount="30" x:FullColumns="1"
+   x:FullRows="1" ss:DefaultColumnWidth="60" ss:DefaultRowHeight="14.5">
+   <Column ss:Width="102"/>
+   <Column ss:Width="68"/>
+   <Column ss:Width="78"/>
+   <Column ss:Width="62"/>
+   <Row>
+    <Cell><Data ss:Type="String">Function Name</Data><NamedCell
+      ss:Name="_FilterDatabase"/></Cell>
+    <Cell><Data ss:Type="String">Threads</Data><NamedCell ss:Name="_FilterDatabase"/></Cell>
+    <Cell><Data ss:Type="String">Duration (μs)</Data><NamedCell
+      ss:Name="_FilterDatabase"/></Cell>
+    <Cell><Data ss:Type="String">Device ID</Data><NamedCell
+      ss:Name="_FilterDatabase"/></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10015651.095000001</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.2984913708371878</Data></Cell>
+    <Cell ss:Formula="=AVERAGE(RC[-1]:R[28]C[-1])"><Data ss:Type="Number">0.30454481443097547</Data></Cell>
+    <Cell ss:Formula="=STDEV(RC[-2]:R[28]C[-2])"><Data ss:Type="Number">1.4439093690343052E-3</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10118380.414999999</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30155296066905402</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10157373.188999999</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30271504254007836</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10182163.556</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30345385727705348</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10198684.868000001</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30394623356094491</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10213194.037</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30437864296732692</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10216744.671</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30448446071196966</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10228633.098999999</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30483876550325678</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10226710.497</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30478146717076587</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10234160.321</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30500349049777314</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10230571.606000001</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30489653784439763</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10235977.222999999</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.3050576387067625</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10237722.665999999</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30510965725941042</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10243639.216</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30528598519888994</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10242332.83</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30524705163937554</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10237885.073000001</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30511449739287794</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10244953.763</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30532516197654902</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10242735.213</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30525904365588369</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10241255.955</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30521495807981347</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10238150.234999999</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30512239988150525</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10238202.620999999</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30512396111489931</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10237176.756999999</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30509338781030354</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10238454.311000001</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30513146210434211</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10241364.184</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30521818357381958</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10241173.681</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30521250610951106</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10241036.363</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30520841369078838</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10238122.203</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.3051215644580238</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10240494.710000001</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30519227108109143</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">33554240</Data></Cell>
+    <Cell><Data ss:Type="Number">10241379.673</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30521864518463243</Data></Cell>
+   </Row>
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <PageSetup>
+    <Header x:Margin="0.4921259845"/>
+    <Footer x:Margin="0.4921259845"/>
+    <PageMargins x:Bottom="0.984251969" x:Left="0.78740157499999996"
+     x:Right="0.78740157499999996" x:Top="0.984251969"/>
+   </PageSetup>
+   <Selected/>
+   <Panes>
+    <Pane>
+     <Number>3</Number>
+     <ActiveRow>2</ActiveRow>
+     <ActiveCol>7</ActiveCol>
+    </Pane>
+   </Panes>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+  </WorksheetOptions>
+  <AutoFilter x:Range="R1C1:R1C4" xmlns="urn:schemas-microsoft-com:office:excel">
+  </AutoFilter>
+ </Worksheet>
+</Workbook>

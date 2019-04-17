@@ -1,0 +1,146 @@
+﻿<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+  <Version>16.00</Version>
+ </DocumentProperties>
+ <OfficeDocumentSettings xmlns="urn:schemas-microsoft-com:office:office">
+  <AllowPNG/>
+ </OfficeDocumentSettings>
+ <ExcelWorkbook xmlns="urn:schemas-microsoft-com:office:excel">
+  <WindowHeight>12190</WindowHeight>
+  <WindowWidth>32767</WindowWidth>
+  <WindowTopX>32767</WindowTopX>
+  <WindowTopY>32767</WindowTopY>
+  <ProtectStructure>False</ProtectStructure>
+  <ProtectWindows>False</ProtectWindows>
+ </ExcelWorkbook>
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Bottom"/>
+   <Borders/>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#000000"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Worksheet1">
+  <Names>
+   <NamedRange ss:Name="_FilterDatabase" ss:RefersTo="=Worksheet1!R1C1:R1C4"
+    ss:Hidden="1"/>
+  </Names>
+  <Table ss:ExpandedColumnCount="8" ss:ExpandedRowCount="11" x:FullColumns="1"
+   x:FullRows="1" ss:DefaultColumnWidth="60" ss:DefaultRowHeight="14.5">
+   <Column ss:Width="102"/>
+   <Column ss:Width="68"/>
+   <Column ss:Width="78"/>
+   <Column ss:Width="62"/>
+   <Row>
+    <Cell><Data ss:Type="String">Function Name</Data><NamedCell
+      ss:Name="_FilterDatabase"/></Cell>
+    <Cell><Data ss:Type="String">Threads</Data><NamedCell ss:Name="_FilterDatabase"/></Cell>
+    <Cell><Data ss:Type="String">Duration (μs)</Data><NamedCell
+      ss:Name="_FilterDatabase"/></Cell>
+    <Cell><Data ss:Type="String">Device ID</Data><NamedCell
+      ss:Name="_FilterDatabase"/></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">268435200</Data></Cell>
+    <Cell><Data ss:Type="Number">81363045.960999995</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30310125483170614</Data></Cell>
+    <Cell ss:Formula="=AVERAGE(RC[-1]:R[9]C[-1])"><Data ss:Type="Number">0.30537888847401534</Data></Cell>
+    <Cell ss:Formula="=STDEV(RC[-2]:R[9]C[-2])"><Data ss:Type="Number">8.1126292581931356E-4</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">268435200</Data></Cell>
+    <Cell><Data ss:Type="Number">81948067.030000001</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.305280630222862</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">268435200</Data></Cell>
+    <Cell><Data ss:Type="Number">82025914.533000007</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30557063504711757</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">268435200</Data></Cell>
+    <Cell><Data ss:Type="Number">82059261.428000003</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30569486203001695</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">268435200</Data></Cell>
+    <Cell><Data ss:Type="Number">82067371.055000007</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30572507277361544</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">268435200</Data></Cell>
+    <Cell><Data ss:Type="Number">82051867.509000003</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30566731750903015</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">268435200</Data></Cell>
+    <Cell><Data ss:Type="Number">82043517.040999994</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30563620956193521</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">268435200</Data></Cell>
+    <Cell><Data ss:Type="Number">82070571.691</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30573699608322602</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">268435200</Data></Cell>
+    <Cell><Data ss:Type="Number">82051650.157000005</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30566650780896099</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="String">mtp_yloop</Data></Cell>
+    <Cell><Data ss:Type="Number">268435200</Data></Cell>
+    <Cell><Data ss:Type="Number">82063163.628000006</Data></Cell>
+    <Cell><Data ss:Type="Number">0</Data></Cell>
+    <Cell ss:Index="6" ss:Formula="=RC[-3]/RC[-4]"><Data ss:Type="Number">0.30570939887168302</Data></Cell>
+   </Row>
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <PageSetup>
+    <Header x:Margin="0.4921259845"/>
+    <Footer x:Margin="0.4921259845"/>
+    <PageMargins x:Bottom="0.984251969" x:Left="0.78740157499999996"
+     x:Right="0.78740157499999996" x:Top="0.984251969"/>
+   </PageSetup>
+   <Selected/>
+   <Panes>
+    <Pane>
+     <Number>3</Number>
+     <ActiveCol>5</ActiveCol>
+     <RangeSelection>C6</RangeSelection>
+    </Pane>
+   </Panes>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+  </WorksheetOptions>
+  <AutoFilter x:Range="R1C1:R1C4" xmlns="urn:schemas-microsoft-com:office:excel">
+  </AutoFilter>
+ </Worksheet>
+</Workbook>
