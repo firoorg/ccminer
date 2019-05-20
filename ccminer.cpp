@@ -1214,7 +1214,8 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 			params = json_dumps(val, 0);
 			json_decref(val);
 
-			req = (char*)malloc(128 + 2 * 84 + strlen(work->txs) + strlen(params) + strlen(mtphashvalue_str) + strlen(mtpreserved_str)  + strlen(merkleroot_str)+ strlen(proofmtp_str) + strlen(blockmtp_str));
+			req = (char*)malloc(128 + 2 * 84 + strlen(work->txs) + strlen(params) + strlen(mtphashvalue_str) 
+									+ strlen(mtpreserved_str)  + strlen(merkleroot_str)+ strlen(proofmtp_str) + strlen(blockmtp_str));
 			sprintf(req,
 				"{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s%s%s\", %s], \"id\":4}\r\n",
 				data_str, mtphashvalue_str, mtpreserved_str, merkleroot_str, blockmtp_str, proofmtp_str, work->txs, params);
@@ -1222,7 +1223,8 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 
 		}
 		else {
-			req = (char*)malloc(128 + 2 * 84 + strlen(work->txs) + strlen(mtphashvalue_str) + strlen(mtpreserved_str)  + strlen(merkleroot_str) + strlen(proofmtp_str) + strlen(blockmtp_str) );
+			req = (char*)malloc(128 + 2 * 84 + strlen(work->txs) + strlen(mtphashvalue_str) + strlen(mtpreserved_str)  
+											 + strlen(merkleroot_str) + strlen(proofmtp_str) + strlen(blockmtp_str) );
 			sprintf(req,
 				"{\"method\": \"submitblock\", \"params\": [\"%s%s%s%s%s%s%s\"], \"id\":4}\r\n",
 				data_str, mtphashvalue_str, mtpreserved_str, merkleroot_str, blockmtp_str, proofmtp_str, work->txs);

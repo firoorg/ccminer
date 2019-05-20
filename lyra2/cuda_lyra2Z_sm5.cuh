@@ -52,12 +52,12 @@ __device__ __forceinline__ void ST4S(const int index, const uint2 data)
 
 __device__ __forceinline__ uint32_t WarpShuffle(uint32_t a, uint32_t b, uint32_t c)
 {
-	return __shfl(a, b, c);
+	return __shfl_sync(0xFFFFFFFF,a, b, c);
 }
 
 __device__ __forceinline__ uint2 WarpShuffle(uint2 a, uint32_t b, uint32_t c)
 {
-	return make_uint2(__shfl(a.x, b, c), __shfl(a.y, b, c));
+	return make_uint2(__shfl_sync(0xFFFFFFFF,a.x, b, c), __shfl_sync(0xFFFFFFFF,a.y, b, c));
 }
 
 __device__ __forceinline__ void WarpShuffle3(uint2 &a1, uint2 &a2, uint2 &a3, uint32_t b1, uint32_t b2, uint32_t b3, uint32_t c)

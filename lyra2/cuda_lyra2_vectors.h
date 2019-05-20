@@ -13,7 +13,7 @@
 #include "cuda_helper.h"
 
 #if __CUDA_ARCH__ < 300
-#define __shfl(x, y, z) (x)
+#define __shfl_sync(a,x, y, z) (x)
 #endif
 
 #if __CUDA_ARCH__ < 320 && !defined(__ldg4)
@@ -572,14 +572,14 @@ static __device__ __forceinline__ uint28 shuffle4(const uint28 &var, int lane)
 {
 #if __CUDA_ARCH__ >= 300
 	uint28 res;
-	res.x.x = __shfl(var.x.x, lane);
-	res.x.y = __shfl(var.x.y, lane);
-	res.y.x = __shfl(var.y.x, lane);
-	res.y.y = __shfl(var.y.y, lane);
-	res.z.x = __shfl(var.z.x, lane);
-	res.z.y = __shfl(var.z.y, lane);
-	res.w.x = __shfl(var.w.x, lane);
-	res.w.y = __shfl(var.w.y, lane);
+	res.x.x = __shfl_sync(0xFFFFFFFF,var.x.x, lane);
+	res.x.y = __shfl_sync(0xFFFFFFFF,var.x.y, lane);
+	res.y.x = __shfl_sync(0xFFFFFFFF,var.y.x, lane);
+	res.y.y = __shfl_sync(0xFFFFFFFF,var.y.y, lane);
+	res.z.x = __shfl_sync(0xFFFFFFFF,var.z.x, lane);
+	res.z.y = __shfl_sync(0xFFFFFFFF,var.z.y, lane);
+	res.w.x = __shfl_sync(0xFFFFFFFF,var.w.x, lane);
+	res.w.y = __shfl_sync(0xFFFFFFFF,var.w.y, lane);
 	return res;
 #else
 	return var;
@@ -592,20 +592,20 @@ static __device__ __forceinline__ ulonglong4 shuffle4(ulonglong4 var, int lane)
 	ulonglong4 res;
     uint2 temp;
 	temp = vectorize(var.x);
-	temp.x = __shfl(temp.x, lane);
-	temp.y = __shfl(temp.y, lane);
+	temp.x = __shfl_sync(0xFFFFFFFF,temp.x, lane);
+	temp.y = __shfl_sync(0xFFFFFFFF,temp.y, lane);
 	res.x = devectorize(temp);
 	temp = vectorize(var.y);
-	temp.x = __shfl(temp.x, lane);
-	temp.y = __shfl(temp.y, lane);
+	temp.x = __shfl_sync(0xFFFFFFFF,temp.x, lane);
+	temp.y = __shfl_sync(0xFFFFFFFF,temp.y, lane);
 	res.y = devectorize(temp);
 	temp = vectorize(var.z);
-	temp.x = __shfl(temp.x, lane);
-	temp.y = __shfl(temp.y, lane);
+	temp.x = __shfl_sync(0xFFFFFFFF,temp.x, lane);
+	temp.y = __shfl_sync(0xFFFFFFFF,temp.y, lane);
 	res.z = devectorize(temp);
 	temp = vectorize(var.w);
-	temp.x = __shfl(temp.x, lane);
-	temp.y = __shfl(temp.y, lane);
+	temp.x = __shfl_sync(0xFFFFFFFF,temp.x, lane);
+	temp.y = __shfl_sync(0xFFFFFFFF,temp.y, lane);
 	res.w = devectorize(temp);
 	return res;
 #else

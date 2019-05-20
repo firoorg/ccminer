@@ -285,7 +285,7 @@ void lyra2Z_gpu_hash_32_sm2(uint32_t threads, uint32_t startNounce, uint64_t *g_
 //#include "cuda_vector_uint2x4.h"
 #ifdef __INTELLISENSE__
 /* just for vstudio code colors */
-__device__ uint32_t __shfl(uint32_t a, uint32_t b, uint32_t c);
+__device__ uint32_t __shfl_sync(0xFFFFFFFF,uint32_t a, uint32_t b, uint32_t c);
 #endif
 
 #define Nrow 8
@@ -369,12 +369,12 @@ __device__ __forceinline__ void ST4S(const int row, const int col, const uint2 d
 #if __CUDA_ARCH__ >= 300
 __device__ __forceinline__ uint32_t WarpShuffle(uint32_t a, uint32_t b, uint32_t c)
 {
-	return __shfl(a, b, c);
+	return __shfl_sync(0xFFFFFFFF, a, b, c);
 }
 
 __device__ __forceinline__ uint2 WarpShuffle(uint2 a, uint32_t b, uint32_t c)
 {
-	return make_uint2(__shfl(a.x, b, c), __shfl(a.y, b, c));
+	return make_uint2(__shfl_sync(0xFFFFFFFF, a.x, b, c), __shfl_sync(0xFFFFFFFF, a.y, b, c));
 }
 
 __device__ __forceinline__ void WarpShuffle3(uint2 &a1, uint2 &a2, uint2 &a3, uint32_t b1, uint32_t b2, uint32_t b3, uint32_t c)

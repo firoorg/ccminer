@@ -7,6 +7,14 @@
 #include <stdio.h>
 #include <memory.h>
 
+#define TPB_MTP 256
+#define Granularity 8
+#define Type uint4
+#define Gran3  Granularity * 3 / 4
+#define Gran1  Granularity * 1 / 4
+#define SHR_OFF 1
+#define FARLOAD(x) far[warp][(x)*(Granularity+SHR_OFF) + lane]
+#define FARSTORE(x) far[warp][lane*(Granularity+SHR_OFF) + (x)]
 
 #include "lyra2/cuda_lyra2_vectors.h"
 static uint32_t *h_MinNonces[16]; // this need to get fixed as the rest of that routine
@@ -15,8 +23,9 @@ static uint32_t *d_MinNonces[16];
 __constant__ uint32_t pTarget[8];
 __constant__ uint32_t pData[20]; // truncated data
 __constant__ uint4 Elements[1];
+
 ulonglong2 * HBlock[16];
-uint8 *GYLocal[16];
+//uint8 *GYLocal[16];
 /*__device__*/ uint32_t *Header[16];
 /*__device__*/ uint2 *buffer_a[16];
 
@@ -987,10 +996,10 @@ __device__ __forceinline__ static int blake2b_compress2b_new(uint64_t *hzcash, c
 }
 
 
-__device__ __forceinline__ static int blake2b_compress2b_new(uint2 *hzcash, const uint4 * __restrict__ block, const uint2 * __restrict__ block0, const uint32_t len, int last)
+__device__ __forceinline__ static int blake2b_compress2b_new(uint2 *hzcash, const Type * __restrict__ block, const uint2 * __restrict__ block0, const uint32_t len, int last)
 {
 
-	uint2 m[16];
+	uint2 m[16] = {0};
 	uint2 v[16];
 
 	const uint2 blakeIVl[8] =
@@ -1008,11 +1017,17 @@ __device__ __forceinline__ static int blake2b_compress2b_new(uint2 *hzcash, cons
 #pragma unroll
 	for (int i = 0; i < 4; ++i)
 		m[i] = block0[i];
-
+/*
 #pragma unroll
-	for (int i = 2; i < 8; ++i)
-		((uint4*)m)[i] = block[(i - 2)*(8 + 1) + lane_id() % 8];
+	for (int i = 0; i < 2; ++i)
+		((Type*)m)[i] =  block[(i + 6)*(Granularity + SHR_OFF) + lane_id() % Granularity];
+*/
 
+if (!last) {
+#pragma unroll
+	for (int i = Gran1 ; i < Granularity; ++i)
+		((Type*)m)[i] = /*(last)? make_uint4(0,0,0,0) :*/ block[(i - Gran1)*(Granularity + SHR_OFF) + lane_id() % Granularity];
+}
 #pragma unroll
 	for (int i = 0; i < 8; ++i)
 		v[i] = hzcash[i];
@@ -1042,6 +1057,20 @@ __device__ __forceinline__ static int blake2b_compress2b_new(uint2 *hzcash, cons
      v[c] += v[d]; \
      v[b] = ROTR64X24(v[b] ^ v[c]); \
      v[a] += v[b] + (m[blake2b_sigma[r][2*i+1]]); \
+     v[d] = ROTR64X16(v[d] ^ v[a]); \
+     v[c] += v[d]; \
+     v[b] = ROTR64XB32(v[b] ^ v[c], 63); \
+  } 
+
+#define G_new(r,i,a,b,c,d) \
+   { \
+	uint8_t bs[2]; \
+	((uint16_t*)bs)[0] = ((uint16_t*)bs[r])[i]; \
+     v[a] +=   v[b] + (m[bs[0]]); \
+     v[d] = eorswap32(v[d] , v[a]); \
+     v[c] += v[d]; \
+     v[b] = ROTR64X24(v[b] ^ v[c]); \
+     v[a] += v[b] + (m[bs[1]]); \
      v[d] = ROTR64X16(v[d] ^ v[a]); \
      v[c] += v[d]; \
      v[b] = ROTR64XB32(v[b] ^ v[c], 63); \
@@ -1099,7 +1128,7 @@ __device__ __forceinline__ void prefetchu(void* addr)
 	asm volatile("prefetchu.L1 [%0];" : : "l"(addr));
 }
 
-#define TPB_MTP 320
+
 
 
 
@@ -1110,12 +1139,6 @@ __device__ __forceinline__ uint32_t load32(uint32_t * const addr)
 	return x;
 }
 
-#define Granularity 8
-#define Gran3  Granularity * 3 / 4
-#define Gran1  Granularity * 1 / 4
-#define SHR_OFF 1
-#define FARLOAD(x) far[warp][(x)*(Granularity+SHR_OFF) + lane]
-#define FARSTORE(x) far[warp][lane*(Granularity+SHR_OFF) + (x)]
 
 __global__ __launch_bounds__(TPB_MTP, 1)
 void yloop_init(uint32_t thr_id, uint32_t threads, uint32_t startNounce, uint8 *GY)
@@ -1150,8 +1173,8 @@ void yloop_init(uint32_t thr_id, uint32_t threads, uint32_t startNounce, uint8 *
 
 
 
-__global__ __launch_bounds__(TPB_MTP, 1)
-void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const uint4  * __restrict__ GBlock,
+__global__  __launch_bounds__(TPB_MTP, 1)
+void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const Type  * __restrict__ GBlock,
 	uint32_t * __restrict__ SmallestNonce)
 {
 	unsigned mask = __activemask();
@@ -1163,17 +1186,30 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 	uint32_t NonceIterator = startNounce + event_thread;
 	int lane = lane_id() % Granularity;
 	int warp = threadIdx.x / Granularity;
-	__shared__ __align__(128) uint4 far[TPB_MTP / Granularity][Granularity * (Granularity + SHR_OFF)];
-	__shared__ __align__(32) uint32_t farIndex[TPB_MTP / Granularity][Granularity];
+	__shared__ __align__(128) Type far[TPB_MTP / Granularity][Granularity * (Granularity + SHR_OFF)];
 
-
+	uint32_t IndexLocal[Granularity];
 //	if (event_thread < threads)
 	{
-
-//		const uint4 *	 __restrict__ GBlock = &((uint4*)DBlock)[0];
+//		prefetchu((void*)&GY[event_thread]);
 		uint8 YLocal; // = GY[event_thread];
+		uint32_t YIndex;
 
 		uint16 DataChunk[2] = { 0 };
+		const uint2 blakeIVl[8] =
+		{
+			{ 0xf3bcc908UL, 0x6a09e667UL },
+			{ 0x84caa73bUL, 0xbb67ae85UL },
+			{ 0xfe94f82bUL, 0x3c6ef372UL },
+			{ 0x5f1d36f1UL, 0xa54ff53aUL },
+			{ 0xade682d1UL, 0x510e527fUL },
+			{ 0x2b3e6c1fUL, 0x9b05688cUL },
+			{ 0xfb41bd6bUL, 0x1f83d9abUL },
+			{ 0x137e2179UL, 0x5be0cd19UL }
+		};
+
+		uint2 v[16];
+		uint2 m[16] = { 0 };
 
 
 		((uint8 *)DataChunk)[0] = ((uint8 *)pData)[0];
@@ -1189,65 +1225,130 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 		blake2b_compress2_256((uint2*)&YLocal, blakeFinal, (uint2*)DataChunk, 100);
 
 
-		bool init_blocks;
-		uint32_t unmatch_block;
-		//		uint32_t localIndex;
-		init_blocks = false;
-		unmatch_block = 0;
+
 
 		#pragma unroll 1
-		for (int j = 1; j <= mtp_L; j++)
+		for (int j = 1; j <= 64; j++)
 		{
-			((uint8*)DataChunk)[0] = YLocal;
 
-			farIndex[warp][lane] = YLocal.s0 & 0x3FFFFF;
-			__syncwarp(mask);
-
+			YIndex = YLocal.s0 & 0x3FFFFF;
+			#pragma unroll
+			for (int t = 0; t< Gran1; t++) {
+				Type *D = (Type*)&YLocal;
+				((Type*)m)[t]  = D[t];
+			}
 			uint32_t len = 0;
 
 			uint16 DataTmp; 
-			DataTmp = ((uint16*)blakeFinal)[0];
+			DataTmp = ((uint16*)blakeFinal)[0]; 
 
 
 			#pragma unroll 1
 			for (int i = 0; i < 9; i++) {
 				int last = (i == 8);
 
-
 				len += last ? 32 : 128;
+		
+					#pragma unroll 
+					for (int t = 0; t<Granularity  ; t++) {
+					
+						uint32_t IndexLocShuff = (__shfl_sync(mask,YIndex,t, Granularity) ) * 8 * Granularity + Granularity * i ;
+						
+						const Type * __restrict__ farP = &GBlock[IndexLocShuff];
 
-
-//					#pragma unroll 
-					for (int t = 0; t<Granularity; t++) {
-
-						const uint4 * __restrict__ farP = &GBlock[farIndex[warp][t] * 64 + 0 + 8 * i + 0];
-
-						far[warp][lane*(Granularity + SHR_OFF) + (t)] = (last) ? make_uint4(0, 0, 0, 0) : farP[lane];
+						prefetchu((void*)&farP[lane].x); 
+/*.x);
+						prefetchu((void*)&farP[lane].y);
+						prefetchu((void*)&farP[lane].z);
+						prefetchu((void*)&farP[lane].w);
+*/						
+						if (!last)
+							far[warp][lane*(Granularity + SHR_OFF) + (t)] = /*(last) ? make_uint4(0, 0,0,0) :*/ farP[lane];
+					 
 					}
-
-					__syncwarp(mask);
-
 				
+//					__syncwarp(mask);
+			
+
 				#pragma unroll
-				for (int t = 0; t< Gran3 + Gran1 ; t++) {
-					uint4 *D = (uint4*)DataChunk;
-					D[t + Gran1] = (FARLOAD(t));
+				for (int i = 0; i < 8; ++i)
+					v[i] = ((uint2*)&DataTmp)[i];
+
+				v[8] = blakeIVl[0];
+				v[9] = blakeIVl[1];
+				v[10] = blakeIVl[2];
+				v[11] = blakeIVl[3];
+				v[12] = blakeIVl[4];
+				v[12].x ^= len;
+				v[13] = blakeIVl[5];
+				v[14] = last ? ~blakeIVl[6] : blakeIVl[6];
+				v[15] = blakeIVl[7];
+
+				if (!last) {
+					#pragma unroll
+					for (int i = Gran1; i < Granularity; ++i)
+						((Type*)m)[i] = /*(last)? make_ulonglong2(0,0) :*/ far[warp][(i - Gran1)*(Granularity + SHR_OFF) + lane_id() % Granularity];
 				}
-//				((ulonglong4*)DataChunk)[0] = YLocal;
 
-				blake2b_compress2b((uint2*)&DataTmp, (uint2*)DataChunk, len, last);
-				
-//				if (last) continue;
+#define G(r,i,a,b,c,d) \
+   { \
+     v[a] +=   v[b] + (m[blake2b_sigma[r][2*i+0]]); \
+     v[d] = eorswap32(v[d] , v[a]); \
+     v[c] += v[d]; \
+     v[b] = ROTR64X24(v[b] ^ v[c]); \
+     v[a] += v[b] + (m[blake2b_sigma[r][2*i+1]]); \
+     v[d] = ROTR64X16(v[d] ^ v[a]); \
+     v[c] += v[d]; \
+     v[b] = ROTR64XB32(v[b] ^ v[c], 63); \
+  } 
+
+
+#define ROUND(r)  \
+  { \
+    G(r,0, 0,4,8,12); \
+    G(r,1, 1,5,9,13); \
+    G(r,2, 2,6,10,14); \
+    G(r,3, 3,7,11,15); \
+    G(r,4, 0,5,10,15); \
+    G(r,5, 1,6,11,12); \
+    G(r,6, 2,7,8,13); \
+    G(r,7, 3,4,9,14); \
+  } 
+
+
+
+				ROUND(0);
+				ROUND(1);
+				ROUND(2);
+				ROUND(3);
+				ROUND(4);
+				ROUND(5);
+				ROUND(6);
+				ROUND(7);
+				ROUND(8);
+				ROUND(9);
+				ROUND(10);
+				ROUND(11);
+
+
+				for (int i = 0; i < 8; ++i)
+					((uint2*)&DataTmp)[i] ^= v[i] ^ v[i + 8];
+
+#undef G
+#undef ROUND
+
 				#pragma unroll
-				for (int t = 0; t< Gran1 ; t++) {
-					uint4 *D = (uint4*)&DataChunk;
+				for (int t = 0; t< Gran1; t++) {
+					Type *D = (Type*)&m;
 					D[t] = FARLOAD(t + Gran3);
+				}
+				#pragma unroll
+				for (int t = Gran1; t< Granularity; t++) {
+					((Type*)m)[t] = make_uint4(0,0,0,0);
 				}
 			
 			}
-//////////////
 
-///////////////
 			YLocal = ((uint8*)&DataTmp)[0];
 
 		}
@@ -1263,8 +1364,8 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const ui
 }
 
 
-__global__ __launch_bounds__(TPB_MTP, 1)
-void mtp_yloop_new(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const uint4  * __restrict__ GBlock,
+__global__  __launch_bounds__(TPB_MTP, 1)
+void mtp_yloop_old(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const Type  * __restrict__ GBlock,
 	uint32_t * __restrict__ SmallestNonce)
 {
 	unsigned mask = __activemask();
@@ -1276,22 +1377,19 @@ void mtp_yloop_new(uint32_t thr_id, uint32_t threads, uint32_t startNounce, cons
 	uint32_t NonceIterator = startNounce + event_thread;
 	int lane = lane_id() % Granularity;
 	int warp = threadIdx.x / Granularity;
-	__shared__ __align__(128) uint4 far[TPB_MTP / Granularity][Granularity * (Granularity + SHR_OFF)];
-	__shared__ __align__(32) uint32_t farIndex[TPB_MTP / Granularity][Granularity];
+	__shared__ __align__(128) Type far[TPB_MTP / Granularity][Granularity * (Granularity + SHR_OFF)];
 
-
-	if (event_thread < threads)
+	uint32_t IndexLocal[Granularity];
+	//	if (event_thread < threads)
 	{
 
-//		const uint8 *	 __restrict__ GBlock = &((uint8*)DBlock)[0];
-		uint8 YLocal;
+		uint8 YLocal; 
+		uint32_t YIndex;
 
 		uint16 DataChunk[2] = { 0 };
 
-
 		((uint8 *)DataChunk)[0] = ((uint8 *)pData)[0];
 		((uint8 *)DataChunk)[1] = ((uint8 *)pData)[1];
-	
 		((uint4*)DataChunk)[4] = ((uint4*)pData)[4];
 		((uint4*)DataChunk)[5] = ((uint4*)Elements)[0];
 
@@ -1300,25 +1398,12 @@ void mtp_yloop_new(uint32_t thr_id, uint32_t threads, uint32_t startNounce, cons
 		blake2b_compress2_256((uint2*)&YLocal, blakeFinal, (uint2*)DataChunk, 100);
 
 
-		bool init_blocks;
-		uint32_t unmatch_block;
-		//		uint32_t localIndex;
-		init_blocks = false;
-		unmatch_block = 0;
-
-		#pragma unroll 1
-		for (int j = 1; j <= mtp_L; j++)
+#pragma unroll 1
+		for (int j = 1; j <= 64; j++)
 		{
-//			((ulonglong4*)DataChunk)[0] = YLocal;
-			#pragma unroll
-			for (int t = 0; t< Gran1; t++) {
-				uint4 *D = (uint4*)&YLocal;
-				FARLOAD(t + Gran3) = D[t];
-			}
-
-			farIndex[warp][lane] = ((uint32_t*)&YLocal)[0] & 0x3FFFFF;
-			__syncwarp(mask);
-
+			((uint8*)DataChunk)[0] = YLocal;
+			YIndex = YLocal.s0 & 0x3FFFFF;
+ 
 			uint32_t len = 0;
 
 			uint16 DataTmp;
@@ -1329,39 +1414,53 @@ void mtp_yloop_new(uint32_t thr_id, uint32_t threads, uint32_t startNounce, cons
 			for (int i = 0; i < 9; i++) {
 				int last = (i == 8);
 
-				#pragma unroll
-				for (int t = 0; t< Gran1; t++) {
-					uint4 *D = (uint4*)&YLocal;
-					D[t] = FARLOAD(t + Gran3);
-				}
-
 
 				len += last ? 32 : 128;
 
-
-				//					#pragma unroll 
+				#pragma unroll 
 				for (int t = 0; t<Granularity; t++) {
 
-					const uint4 * __restrict__ farP = &GBlock[farIndex[warp][t] * 64 + 0 + 8 * i + 0];
+					uint32_t IndexLocShuff = (__shfl_sync(mask, YIndex, t, Granularity)) * 8 * Granularity + Granularity * i;
 
-					far[warp][lane*(Granularity + SHR_OFF) + (t)] = (last) ? make_uint4(0, 0,0,0) : farP[lane];
+					const Type * __restrict__ farP = &GBlock[IndexLocShuff];
+
+					prefetchu((void*)&farP[lane].x);
+					prefetchu((void*)&farP[lane].y);
+					prefetchu((void*)&farP[lane].z);
+					prefetchu((void*)&farP[lane].w);
+
+						far[warp][lane*(Granularity + SHR_OFF) + (t)] = (last) ? make_uint4(0, 0,0,0) : farP[lane];
+
 				}
 
 				__syncwarp(mask);
 
 
-				blake2b_compress2b_new((uint2*)&DataTmp, far[warp],(uint2*)&YLocal, len, last);
 
+				#pragma unroll
+				for (int t = 0; t< Gran3 ; t++) {
+						Type *D = (Type*)DataChunk;
+						D[t + Gran1] = FARLOAD(t);
+				}
+
+				blake2b_compress2b((uint2*)&DataTmp, (uint2*)DataChunk, len, last);
+
+
+				#pragma unroll
+				for (int t = 0; t< Gran1 ; t++) {
+						Type *D = (Type*)&DataChunk;
+						D[t] =  FARLOAD(t + Gran3);
+				}
 
 			}
-	
+
 			YLocal = ((uint8*)&DataTmp)[0];
 
 		}
 
 
 
-		if (((uint32_t*)&YLocal)[7] <= pTarget[7])
+		if (((uint64_t*)&YLocal)[3] <= ((uint64_t*)pTarget)[3])
 		{
 			atomicMin(&SmallestNonce[0], NonceIterator);
 		}
@@ -1378,6 +1477,7 @@ void mtp_cpu_init(int thr_id, uint32_t threads)
 	// just assign the device pointer allocated in main loop
 
 //	cudaMemcpyToSymbol(GYLocal,&hash1[thr_id], 8 * sizeof(uint32_t) * threads);
+
 //	cudaMalloc((void**)&GYLocal[thr_id], 8 * sizeof(uint32_t) * threads);
 
 	cudaMalloc((void**)&HBlock[thr_id], 256 * argon_memcost * sizeof(uint32_t));
@@ -1428,7 +1528,7 @@ uint32_t mtp_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce)
 	dim3 gridyloop(threads / tpb);
 	dim3 blockyloop(tpb);
 //	yloop_init << < gridyloop, blockyloop >> >(thr_id, threads, startNounce, GYLocal[thr_id]);
-	mtp_yloop << < gridyloop, blockyloop >> >(thr_id, threads, startNounce, (uint4*)HBlock[thr_id], d_MinNonces[thr_id]);
+	mtp_yloop_old << < gridyloop, blockyloop >> >(thr_id, threads, startNounce, (Type*)HBlock[thr_id], d_MinNonces[thr_id]);
 
 
 	cudaMemcpy(h_MinNonces[thr_id], d_MinNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);

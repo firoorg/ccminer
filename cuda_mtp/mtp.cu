@@ -71,15 +71,17 @@ extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t
 //		cudaSetDeviceFlags(cudaDeviceScheduleYield);
 //		cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte);
 		int intensity = 20;
-		throughput = cuda_default_throughput(thr_id, 1U << intensity); // 18=256*256*4;
-//		throughput =  1024*64;
-		if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
-
+		throughput = cuda_default_throughput(thr_id, 1U << intensity); // 18=256*256*4;	
 		cudaDeviceProp props;
 		cudaGetDeviceProperties(&props, dev_id);
+//		throughput =  1024*64;
+//		throughput = props.multiProcessorCount * 128 * 256 * 2   ;
+		if (init[thr_id]) throughput =min(throughput, max_nonce - first_nonce);
+
+
 	
 //		cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
-		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
+		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads number of multiproc %d", throughput2intensity(throughput), throughput, props.multiProcessorCount);
 
 
 		mtp_cpu_init(thr_id, throughput);

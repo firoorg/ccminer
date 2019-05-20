@@ -15,7 +15,7 @@ typedef uint48 uint4x2;
 #ifdef __INTELLISENSE__
 #define __CUDA_ARCH__ 500
 #define __byte_perm(x,y,c) x
-#define __shfl(x,y,c) x
+#define __shfl_sync(0xFFFFFFFF,x,y,c) x
 #define atomicExch(p,x) x
 #endif
 
@@ -84,7 +84,7 @@ __constant__ uint32_t BLAKE2S_SIGMA[10][16] = {
 #if __CUDA_ARCH__ >= 300
 __device__ __forceinline__ uint32_t WarpShuffle(uint32_t a, uint32_t b, uint32_t c)
 {
-	return __shfl(a, b, c);
+	return __shfl_sync(0xFFFFFFFF,a, b, c);
 }
 
 __device__ __forceinline__ void WarpShuffle3(uint32_t &a1, uint32_t &a2, uint32_t &a3, uint32_t b1, uint32_t b2, uint32_t b3, uint32_t c)

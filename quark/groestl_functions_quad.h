@@ -264,18 +264,18 @@ void G256_ShiftBytesQ_quad(uint32_t &x7, uint32_t &x6, uint32_t &x5, uint32_t &x
 
 #if __CUDA_ARCH__ < 300
 /**
- * __shfl() returns the value of var held by the thread whose ID is given by srcLane.
+ * __shfl_sync(0xFFFFFFFF,) returns the value of var held by the thread whose ID is given by srcLane.
  * If srcLane is outside the range 0..width-1, the thread’s own value of var is returned.
  */
 #undef __shfl
-#define __shfl(var, srcLane, width) (uint32_t)(var)
+#define __shfl_sync(0xFFFFFFFF,var, srcLane, width) (uint32_t)(var)
 #endif
 
 __device__ __forceinline__
 void G256_MixFunction_quad(uint32_t *r)
 {
 #define SHIFT64_16(hi, lo)    __byte_perm(lo, hi, 0x5432)
-#define A(v, u)             __shfl((int)r[v], ((threadIdx.x+u)&0x03), 4)
+#define A(v, u)             __shfl_sync(0xFFFFFFFF,(int)r[v], ((threadIdx.x+u)&0x03), 4)
 #define S(idx, l)            SHIFT64_16( A(idx, (l+1)), A(idx, l) )
 
 #define DOUBLE_ODD(i, bc)        ( S(i, (bc)) ^ A(i, (bc) + 1) )

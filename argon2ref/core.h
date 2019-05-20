@@ -240,4 +240,7 @@ void fill_segment(const argon2_instance_t *instance,
 int fill_memory_blocks(argon2_instance_t *instance);
 
 int fill_memory_blocks_mtp(argon2_instance_t *instance);
+
+
+
 #endif
