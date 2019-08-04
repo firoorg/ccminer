@@ -96,6 +96,11 @@ typedef struct __align__(256) uint4x16 {
 	uint4 s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15;
 } uint4x16;
 
+typedef struct __builtin_align__(128) uint4x8 {
+	uint4 s0, s1, s2, s3, s4, s5, s6, s7;
+} uint4x8;
+
+
 static __inline__ __device__ ulonglong2to8 make_ulonglong2to8(ulonglong2 s0, ulonglong2 s1, ulonglong2 s2, ulonglong2 s3)
 {
 	ulonglong2to8 t; t.l0=s0; t.l1=s1; t.l2=s2; t.l3=s3;
@@ -473,7 +478,20 @@ static __device__ __inline__ void ldg4(const uint28 *ptr, uint28 *ret)
 	asm("ld.global.nc.v4.u32 {%0,%1,%2,%3}, [%4+80];" : "=r"(ret[2].z.x), "=r"(ret[2].z.y), "=r"(ret[2].w.x), "=r"(ret[2].w.y) : __LDG_PTR(ptr));
 }
 
+
+
+
+
 #endif /* __CUDA_ARCH__ < 320 */
+/*
+static __device__ __inline__ ulonglong4 __ldca(const ulonglong4 *__restrict__ ptr)
+{
+ ulonglong4 ret;
+	asm volatile ("ld.global.ca.v2.u64 {%0,%1}, [%2];"  : "=l"(ret.x), "=l"(ret.y) : __LDG_PTR(ptr));
+	asm volatile ("ld.global.ca.v2.u64 {%0,%1}, [%2+16];"  : "=l"(ret.z), "=l"(ret.w) : __LDG_PTR(ptr));
+	return ret;
+}
+*/
 static __forceinline__ __device__ uint4 swapvec(const uint4 &buf)
 {
 	uint4 vec;

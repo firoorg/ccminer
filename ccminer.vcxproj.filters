@@ -883,9 +883,6 @@
     <CudaCompile Include="m7\m7_whirlpool512.cu">
       <Filter>Source Files\CUDA\m7</Filter>
     </CudaCompile>
-    <CudaCompile Include="cuda_mtp\cuda_mtp.cu">
-      <Filter>Source Files\CUDA\mtp</Filter>
-    </CudaCompile>
     <CudaCompile Include="cuda_mtp\mtp.cu">
       <Filter>Source Files\CUDA\mtp</Filter>
     </CudaCompile>

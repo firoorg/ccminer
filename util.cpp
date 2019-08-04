@@ -1375,9 +1375,10 @@ json_t* recode_message(json_t *MyObject2)
 
 void stratum_bos_fillbuffer(struct stratum_ctx *sctx)
 {
-	int timeout = opt_timeout;
+	int timeout = 300; //opt_timeout;
 	bool ret = true;
 	time_t rstart = time(NULL);
+	uint32_t TotalSize = sctx->sum_bossize;
 /*
 	if (!socket_full(sctx->sock, 1)) {
 		applog(LOG_ERR, "Fillbuffer stratum_recv_line timed out");
@@ -1395,7 +1396,7 @@ void stratum_bos_fillbuffer(struct stratum_ctx *sctx)
 			ret = false;
 			break;
 		}
-		if (n < 0) {
+		 if (n < 0) {
 			if (!socket_blocks() || !socket_full(sctx->sock, 1)) {
 				ret = false;
 				break;
@@ -1403,12 +1404,38 @@ void stratum_bos_fillbuffer(struct stratum_ctx *sctx)
 		}
 		else {
 			stratum_buffer_append_bos(sctx, s, n);
-//			printf("bossize of buffer %d len buf %d\n", bos_sizeof(sctx->sockbuf), (ssize_t)sctx->sockbuf_bossize);
+			while (TotalSize + bos_sizeof(sctx->sockbuf + TotalSize) <= sctx->sockbuf_bossize) {
+			
+				TotalSize += bos_sizeof(sctx->sockbuf + TotalSize);
+				if (TotalSize + bos_sizeof(sctx->sockbuf + TotalSize) == sctx->sockbuf_bossize) break;
+			}; 
+//			printf("bossize of buffer %d len buf %d TotalSize %d\n", bos_sizeof(sctx->sockbuf), (ssize_t)sctx->sockbuf_bossize,TotalSize);
 		}
 	} while (time(NULL) - rstart < timeout &&  !strstr(sctx->sockbuf, "\n"));
-
+	sctx->sum_bossize = TotalSize;
 
 }
+
+void stratum_bos_resizebuffer(struct stratum_ctx *sctx)
+{
+
+	if (bos_sizeof(sctx->sockbuf)<sctx->sockbuf_bossize) {
+		uint32_t totsize = sctx->sockbuf_bossize;
+		uint32_t remsize = sctx->sockbuf_bossize - bos_sizeof(sctx->sockbuf);
+		uint32_t currsize = bos_sizeof(sctx->sockbuf);
+		memmove(sctx->sockbuf, sctx->sockbuf + currsize, remsize);
+		sctx->sockbuf_bossize = remsize;
+		sctx->sum_bossize -= currsize;
+	}
+
+	else if (bos_sizeof(sctx->sockbuf)==sctx->sockbuf_bossize){
+		sctx->sockbuf[0] = '\0';
+		sctx->sockbuf_bossize = 0;
+		sctx->sum_bossize = 0;
+	}
+
+}
+
 
 json_t *stratum_recv_line_bos(struct stratum_ctx *sctx)
 {
@@ -1459,16 +1486,7 @@ json_t *stratum_recv_line_bos(struct stratum_ctx *sctx)
 						}
 					}
 					free(boserror);
-					if (bos_sizeof(sctx->sockbuf)<sctx->sockbuf_bossize) {
-						uint32_t totsize  = sctx->sockbuf_bossize;
-						uint32_t remsize  = sctx->sockbuf_bossize - bos_sizeof(sctx->sockbuf);
-						uint32_t currsize = bos_sizeof(sctx->sockbuf);
-						memmove(sctx->sockbuf, sctx->sockbuf + currsize, remsize);
-						sctx->sockbuf_bossize = remsize;
-					} else {
-						sctx->sockbuf[0] = '\0';
-						sctx->sockbuf_bossize = 0;
-					}
+					stratum_bos_resizebuffer(sctx);
 					goto out;
 				
 
@@ -1481,7 +1499,7 @@ json_t *stratum_recv_line_bos(struct stratum_ctx *sctx)
 //	}
 out:
 
-	if (sret && opt_protocol)
+if (sret && opt_protocol)
 		printf("message here %s \n", json_dumps(MyObject,0));
 	return MyObject;
 }
@@ -1510,10 +1528,12 @@ char *  stratum_recv_line_boschar(struct stratum_ctx *sctx)
 //				MyObject2 = bos_deserialize(s + bos_sizeof(s), boserror);
 				MyObject2 = bos_deserialize(sctx->sockbuf, boserror);
 			}
-			else if (bos_sizeof(sctx->sockbuf) > sctx->sockbuf_bossize)
-				printf("missing something in message \n");
+			else if (bos_sizeof(sctx->sockbuf) > sctx->sockbuf_bossize) {
+				printf("stratum_recv_line_boschar missing something in message \n");
+				return 0; }
 			else 
 				MyObject2 = bos_deserialize(sctx->sockbuf, boserror);
+
 			json_t *json_arr = json_array();
 			size_t size;
 			const char *key;
@@ -1570,17 +1590,7 @@ char *  stratum_recv_line_boschar(struct stratum_ctx *sctx)
 				}
 			}
 			free(boserror);
-			if (bos_sizeof(sctx->sockbuf)<sctx->sockbuf_bossize) {
-				uint32_t totsize = sctx->sockbuf_bossize;
-				uint32_t remsize = sctx->sockbuf_bossize - bos_sizeof(sctx->sockbuf);
-				uint32_t currsize = bos_sizeof(sctx->sockbuf);
-				memmove(sctx->sockbuf, sctx->sockbuf + currsize, remsize);
-				sctx->sockbuf_bossize = remsize;
-			}
-			else {
-				sctx->sockbuf[0] = '\0';
-				sctx->sockbuf_bossize = 0;
-			}
+			stratum_bos_resizebuffer(sctx);
 			goto out;
 
 out:
@@ -1598,6 +1608,7 @@ bool    stratum_recv_line_compact(struct stratum_ctx *sctx)
 	ssize_t len, buflen;
 	ssize_t mess;
 	uint32_t bossize = 0;
+	uint32_t Nmissing_packet = 0;
 	bool istarget = false;
 	bool isok = false;
 	char *sret = NULL;
@@ -1610,7 +1621,10 @@ bool    stratum_recv_line_compact(struct stratum_ctx *sctx)
 			// this should empty the buffer whatever its content
 
 			json_error_t *boserror = (json_error_t *)malloc(sizeof(json_error_t));
+/*
 			do {
+				if (bossize > 100000000) break;
+				if (bos_sizeof(sctx->sockbuf + bossize) == 0) break;
 				MyObject2 = bos_deserialize(sctx->sockbuf + bossize, boserror);
 				bossize += bos_sizeof(sctx->sockbuf + bossize);
 
@@ -1619,11 +1633,40 @@ bool    stratum_recv_line_compact(struct stratum_ctx *sctx)
 				isok = stratum_handle_method_bos_json(sctx, MyObject);
 				json_decref(MyObject2);
 				json_decref(MyObject);
-				if (bossize>sctx->sockbuf_bossize) printf("missing packet\n");
+				if (bossize>sctx->sockbuf_bossize) {
+					Nmissing_packet++;
+					stratum_bos_fillbuffer(sctx);
+					printf("stratum_recv_line_compact missing packet\n");
+					if (Nmissing_packet>5) {ret=false; goto out;}
+				}
+			printf("coming in the loop\n");
 			} while (bossize != sctx->sockbuf_bossize);
+*/
+
+			do {
+				if (bos_sizeof(sctx->sockbuf) > 100000) break;
+				if (bos_sizeof(sctx->sockbuf) == 0) break;
+				MyObject2 = bos_deserialize(sctx->sockbuf, boserror);
+//				bossize += bos_sizeof(sctx->sockbuf + bossize);
+
+				MyObject = recode_message(MyObject2);
+
+				isok = stratum_handle_method_bos_json(sctx, MyObject);
+				json_decref(MyObject2);
+				json_decref(MyObject);
+				if (sctx->sum_bossize>sctx->sockbuf_bossize) {
+					Nmissing_packet++;
+					stratum_bos_fillbuffer(sctx);
+					printf("stratum_recv_line_compact missing packet\n");
+					if (Nmissing_packet>5) { ret = false; goto out; }
+				}
+
+				stratum_bos_resizebuffer(sctx);
+			} while (sctx->sum_bossize != 0);
 			free(boserror);
-			sctx->sockbuf[0] = '\0';
-			sctx->sockbuf_bossize = 0;
+//			sctx->sockbuf[0] = '\0';
+//			sctx->sockbuf_bossize = 0;
+//			sctx->sum_bossize = 0;
 			goto out;
 
 
@@ -1633,60 +1676,11 @@ bool    stratum_recv_line_compact(struct stratum_ctx *sctx)
 	}
 
 out:
-//	printf("end stratum_recv_line_compact\n");
+
 	//	if (sret && opt_protocol)
 	//		applog(LOG_DEBUG, "< %s", sret);
 	return isok;//json_dumps(MyObject, 0);
 }
-
-json_t* stratum_recv_line_c2(struct stratum_ctx *sctx)
-{
-
-	json_t *MyObject = json_object();
-
-	ssize_t len, buflen;
-	ssize_t mess;
-	uint32_t bossize = 0;
-	bool istarget = false;
-	bool isok = false;
-	char *sret = NULL;
-	char *tok;
-
-	bool ret = true;
-	time_t rstart = time(NULL);
-
-
-		{
-
-		stratum_bos_fillbuffer(sctx);
-
-			json_error_t *boserror = (json_error_t *)malloc(sizeof(json_error_t));
-			do {
-				json_t *MyObject2 = json_object();
-				MyObject2 = bos_deserialize(sctx->sockbuf + bossize, boserror);
-				bossize += bos_sizeof(sctx->sockbuf + bossize);
-
-				MyObject = recode_message(MyObject2);
-				isok = stratum_handle_method_bos_json(sctx, MyObject);
-				json_decref(MyObject2);
-				if (!isok)  // not an answer
-					json_decref(MyObject);
-				
-			} while (bossize != sctx->sockbuf_bossize);
-			free(boserror);
-			sctx->sockbuf[0] = '\0';
-			sctx->sockbuf_bossize = 0;
-
-			goto out;
-		}
-
-out:
-
-	//	if (sret && opt_protocol)
-	//		applog(LOG_DEBUG, "< %s", sret);
-	return MyObject;//json_dumps(MyObject, 0);
-}
-
 
 
 #if LIBCURL_VERSION_NUM >= 0x071101
@@ -1719,7 +1713,9 @@ bool stratum_connect(struct stratum_ctx *sctx, const char *url)
 		sctx->sockbuf_size = RBUFSIZE;
 	}
 	sctx->sockbuf[0] = '\0';
-//	sctx->sockbuf_bossize = 0;	
+/* to watch */
+	sctx->sockbuf_bossize = 0;	
+	sctx->sum_bossize = 0;
 	pthread_mutex_unlock(&stratum_sock_lock);
 
 	if (url != sctx->url) {
@@ -2020,6 +2016,7 @@ out:
 
 bool stratum_subscribe_bos(struct stratum_ctx *sctx)
 {
+
 	char *s, *sret = NULL;
 
 	const char *sid;
@@ -2199,6 +2196,7 @@ out:
 
 bool stratum_authorize_bos(struct stratum_ctx *sctx, const char *user, const char *pass)
 {
+
 	json_t *val = NULL, *res_val, *err_val;
 	char  *sret;
 	json_t *obj;
@@ -2233,13 +2231,14 @@ bool stratum_authorize_bos(struct stratum_ctx *sctx, const char *user, const cha
 	err_val = json_object_get(val, "error");
 	req_id = (int)json_integer_value(json_object_get(val, "id"));
 
+//printf("authorize method dump val = %s \n",json_dumps(val,0));
+
 	if (req_id == 2
 		&& (!res_val || json_is_false(res_val) || (err_val && !json_is_null(err_val)))) {
 		applog(LOG_ERR, "Stratum authentication failed");
 		goto out;
 	}
 	while (1) {
-//		printf("coming here\n");
 		if (!stratum_recv_line_compact(sctx))
 			break;
 	}
@@ -2286,6 +2285,7 @@ static uint32_t getblocheight(struct stratum_ctx *sctx)
 
 static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 {
+
 	const char *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *stime;
 	const char *claim = NULL, *nreward = NULL;
 	size_t coinb1_size, coinb2_size;
@@ -2310,6 +2310,10 @@ static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 	}
 	coinb1 = json_string_value(json_array_get(params, p++));
 	coinb2 = json_string_value(json_array_get(params, p++));
+
+
+
+
 	merkle_arr = json_array_get(params, p++);
 	if (!merkle_arr || !json_is_array(merkle_arr))
 		goto out;
@@ -2428,19 +2432,20 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 	job_id = (const uchar*)json_bytes_value(json_array_get(params, p++));
 
 	//	memcpy(sctx->job.ucjob_id, job_id, job_idsize);
-	//	printf("before merkle count job_idsize %d %08x\n",job_idsize,((uint32_t*)job_id)[0]);
+
 	prevhash = (const uchar*)json_bytes_value(json_array_get(params, p++));
 
 	coinb1 = (const uchar*)json_bytes_value(json_array_get(params, p));
 	coinb1_size = json_bytes_size(json_array_get(params, p++));
 
+
 	coinb2 = (const uchar*)json_bytes_value(json_array_get(params, p));
 	coinb2_size = json_bytes_size(json_array_get(params, p++));
 
 	merkle_arr = json_array_get(params, p++);
+
 	if (!merkle_arr || !json_is_array(merkle_arr))
 		goto out;
-
 
 	merkle_count = (int)json_array_size(merkle_arr);
 	version = (const uchar*)json_bytes_value(json_array_get(params, p++));
@@ -2451,7 +2456,6 @@ static bool stratum_notify_bos(struct stratum_ctx *sctx, json_t *params)
 
 	clean = json_is_true(json_array_get(params, p));
 
-//printf("job_idsize %d\n", job_idsize);
 	
 
 	if (!job_id || !prevhash || !coinb1 || !coinb2 || !version || !nbits || !ntime /*||
@@ -3218,6 +3222,7 @@ bool stratum_handle_method_bos(struct stratum_ctx *sctx, const char *s)
 
 	params = json_object_get(val, "params");
 
+//	printf(" stratum_handle_method_bosThe method %s\n", method);
 
 	id = json_object_get(val, "id");
 
@@ -3294,6 +3299,9 @@ bool stratum_handle_method_bos_json(struct stratum_ctx *sctx, json_t *val)
 	params = json_object_get(val, "params");
 
 	id = json_object_get(val, "id");
+
+//	printf("stratum_handle_method_bos_json The method  %s\n",method);
+
 
 	if (!strcasecmp(method, "mining.notify")) {
 //		printf("mining.notify\n");
@@ -3442,6 +3450,8 @@ bool tq_push(struct thread_q *tq, void *data)
 
 void *tq_pop(struct thread_q *tq, const struct timespec *abstime)
 {
+
+
 	struct tq_ent *ent;
 	void *rval = NULL;
 	int rc;
@@ -3451,10 +3461,11 @@ void *tq_pop(struct thread_q *tq, const struct timespec *abstime)
 	if (!list_empty(&tq->q))
 		goto pop;
 
-	if (abstime)
+	if (abstime) {
 		rc = pthread_cond_timedwait(&tq->cond, &tq->mutex, abstime);
-	else
+	} else {
 		rc = pthread_cond_wait(&tq->cond, &tq->mutex);
+	}
 	if (rc)
 		goto out;
 	if (list_empty(&tq->q))

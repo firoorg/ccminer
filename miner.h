@@ -292,8 +292,8 @@ void sha256d(unsigned char *hash, const unsigned char *data, int len);
 #define HAVE_SHA256_8WAY 0
 
 struct work;
-extern int scanhash_mtp(int nthreads, int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp, struct stratum_ctx *sctx);
-extern int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp, struct stratum_ctx *sctx);
+extern int scanhash_mtp(int nthreads, int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp, struct stratum_ctx *sctx, char * prot);
+extern int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp, struct stratum_ctx *sctx, char * prot);
 extern int scanhash_blake256(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, int8_t blakerounds);
 extern int scanhash_blake2s(int thr_id, struct work *work, uint32_t max_nonce, unsigned long *hashes_done);
 extern int scanhash_bmw(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
@@ -545,6 +545,7 @@ int cuda_gpu_info(struct cgpu_info *gpu);
 int cuda_available_memory(int thr_id);
 
 uint32_t cuda_default_throughput(int thr_id, uint32_t defcount);
+uint32_t cuda_default_throughput_mtp(int thr_id, uint32_t defcount, uint32_t proc_count, uint32_t tpb);
 #define device_intensity(t,f,d) cuda_default_throughput(t,d)
 double throughput2intensity(uint32_t throughput);
 
@@ -659,6 +660,7 @@ struct stratum_ctx {
 	curl_socket_t sock;
 	size_t sockbuf_size;
 	size_t sockbuf_bossize; // redundant
+	size_t sum_bossize;
 	char *sockbuf;
 
 	double next_diff;
@@ -769,11 +771,16 @@ struct pool_infos {
 	int retries;
 	int fail_pause;
 	int timeout;
+	double donation;
+	double rate;
+	double active;
+	double current_diff;
 	// stats
 	uint32_t work_time;
 	uint32_t wait_time;
 	uint32_t accepted_count;
 	uint32_t rejected_count;
+	uint32_t previous_count;
 	uint32_t solved_count;
 	uint32_t stales_count;
 	time_t last_share_time;
@@ -791,10 +798,13 @@ extern void encode_tx_value(char *encoded, json_int_t value);
 extern void job_pack_tx(char *data, json_int_t amount, char *key);
 void pool_init_defaults(void);
 void pool_set_creds(int pooln);
+void pool_set_creds_dn(int pooln, char * donation_add, double donation);
 void pool_set_attr(int pooln, const char* key, char* arg);
 bool pool_switch_url(char *params);
 bool pool_switch(int thr_id, int pooln);
 bool pool_switch_next(int thr_id);
+bool pool_retry(int thr_id);
+bool pool_switch_DN(int thr_id);
 int pool_get_first_valid(int startfrom);
 bool parse_pool_array(json_t *obj);
 void pool_dump_infos(void);
@@ -819,11 +829,12 @@ bool stratum_handle_method_bos(struct stratum_ctx *sctx, const char *s);
 bool stratum_handle_method_m7(struct stratum_ctx *sctx, const char *s);
 void stratum_free_job(struct stratum_ctx *sctx);
 bool stratum_handle_method_bos_json(struct stratum_ctx *sctx, json_t *val);
-json_t* stratum_recv_line_c2(struct stratum_ctx *sctx);
+
 json_t *stratum_recv_line_bos(struct stratum_ctx *sctx);
 bool stratum_recv_line_compact(struct stratum_ctx *sctx);
 
 void stratum_bos_fillbuffer(struct stratum_ctx *sctx);
+void stratum_bos_resizebuffer(struct stratum_ctx *sctx);
 json_t* recode_message(json_t *MyObject2);
 void hashlog_remember_submit(struct work* work, uint32_t nonce);
 void hashlog_remember_scan_range(struct work* work);

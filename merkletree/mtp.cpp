@@ -701,14 +701,14 @@ int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 			getblockindex(thr_id, ij, instance, &prev_index, &ref_index);
 
 			//			copy_blockS(&nBlockMTP[j * 2 - 2], &instance->memory[prev_index]);
-			get_block(thr_id, (uint8_t*)nBlockMTP[j * 2 - 2].v, prev_index);
+			get_block(thr_id, /*(uint8_t*)*/nBlockMTP[j * 2 - 2].v, prev_index);
 			//ref block
 			//			copy_blockS(&nBlockMTP[j * 2 - 1], &instance->memory[ref_index]);
-			get_block(thr_id, (uint8_t*)nBlockMTP[j * 2 - 1].v, ref_index);
+			get_block(thr_id, /*(uint8_t*)*/nBlockMTP[j * 2 - 1].v, ref_index);
 			block blockhash;
 			uint8_t blockhash_bytes[ARGON2_BLOCK_SIZE];
 			//			copy_block(&blockhash, &instance->memory[ij]);
-			get_block(thr_id, (uint8_t*)&blockhash.v, ij);
+			get_block(thr_id, /*(uint8_t*)*/&blockhash.v, ij);
 
 
 			store_block(&blockhash_bytes, &blockhash);
@@ -727,7 +727,7 @@ int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 			block blockhash_curr;
 			uint8_t blockhash_curr_bytes[ARGON2_BLOCK_SIZE];
 			//			copy_block(&blockhash_curr, &instance->memory[ij]);
-			get_block(thr_id, (uint8_t*)&blockhash_curr.v, ij);
+			get_block(thr_id, /*(uint8_t*)*/&blockhash_curr.v, ij);
 			store_block(&blockhash_curr_bytes, &blockhash_curr);
 			ablake2b_state state_curr;
 			ablake2b_init(&state_curr, MERKLE_TREE_ELEMENT_SIZE_B);
@@ -754,7 +754,7 @@ int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 			block blockhash_prev;
 			uint8_t blockhash_prev_bytes[ARGON2_BLOCK_SIZE];
 			//			copy_block(&blockhash_prev, &instance->memory[prev_index]);
-			get_block(thr_id, (uint8_t*)&blockhash_prev.v, prev_index);
+			get_block(thr_id, /*(uint8_t*)*/&blockhash_prev.v, prev_index);
 			store_block(&blockhash_prev_bytes, &blockhash_prev);
 			ablake2b_state state_prev;
 			ablake2b_init(&state_prev, MERKLE_TREE_ELEMENT_SIZE_B);
@@ -785,7 +785,7 @@ int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 			block blockhash_ref;
 			uint8_t blockhash_ref_bytes[ARGON2_BLOCK_SIZE];
 			//			copy_block(&blockhash_ref, &instance->memory[ref_index]);
-			get_block(thr_id, (uint8_t*)&blockhash_ref.v, ref_index);
+			get_block(thr_id, /*(uint8_t*)*/&blockhash_ref.v, ref_index);
 			store_block(&blockhash_ref_bytes, &blockhash_ref);
 			ablake2b_state state_ref;
 			ablake2b_init(&state_ref, MERKLE_TREE_ELEMENT_SIZE_B);

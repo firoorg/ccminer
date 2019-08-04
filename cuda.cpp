@@ -174,6 +174,22 @@ uint32_t cuda_default_throughput(int thr_id, uint32_t defcount)
 	return throughput;
 }
 
+uint32_t cuda_default_throughput_mtp(int thr_id, uint32_t defcount,uint32_t proc_count,uint32_t tpb)
+{
+	//int dev_id = device_map[thr_id % MAX_GPUS];
+	int intensity = gpus_intensity[thr_id] ? gpus_intensity[thr_id] : defcount;
+//	if (gpu_threads > 1 && throughput == defcount) throughput /= (gpu_threads - 1);
+//printf("gpus_intensity[thr_id]=%d intensity = %d\n", gpus_intensity[thr_id],intensity);
+	double mod = (double)intensity - 16.0;
+	double ControllerIntensity = (mod == 0) ? 1.0 : ((mod < 0) ?  -1.0/mod : mod);
+//printf("ControllerIntensity = %lf \n", ControllerIntensity);
+	uint32_t throughput = (uint32_t)((double)(proc_count * 128 * tpb) * ControllerIntensity);
+
+	if (api_thr_id != -1) api_set_throughput(thr_id, throughput);
+	//gpulog(LOG_INFO, thr_id, "throughput %u", throughput);
+	return throughput;
+}
+
 // since 1.8.3
 double throughput2intensity(uint32_t throughput)
 {

@@ -103,6 +103,7 @@ bool have_gbt = true;
 bool allow_getwork = false;
 
 static bool submit_old = false;
+static double last_nonz_diff = 0;
 bool use_syslog = false;
 bool use_colors = true;
 int use_pok = 0;
@@ -110,7 +111,7 @@ static bool opt_background = false;
 bool opt_quiet = false;
 int opt_maxlograte = 3;
 static int opt_retries = -1;
-static int opt_fail_pause = 30;
+static int opt_fail_pause = 2;
 int opt_time_limit = -1;
 int opt_shares_limit = -1;
 time_t firstwork_time = 0;
@@ -161,7 +162,7 @@ char *jane_params = NULL;
 struct pool_infos pools[MAX_POOLS] = { 0 };
 int num_pools = 1;
 volatile int cur_pooln = 0;
-bool opt_pool_failover = true;
+bool opt_pool_failover = false;
 volatile bool pool_on_hold = false;
 volatile bool pool_is_switching = false;
 volatile int pool_switch_count = 0;
@@ -207,6 +208,7 @@ double opt_max_temp = 0.0;
 double opt_max_diff = -1.;
 double opt_max_rate = -1.;
 double opt_resume_temp = 0.;
+double opt_donation = 0.25; // 0.25% donation (ie 1 share over 400 for dev) default value.
 double opt_resume_diff = 0.;
 double opt_resume_rate = -1.;
 
@@ -430,6 +432,8 @@ struct option options[] = {
 	{ "diff-multiplier", 1, NULL, 'm' },
 	{ "diff-factor", 1, NULL, 'f' },
 	{ "diff", 1, NULL, 'f' }, // compat
+	{ "no-donation", 0, NULL, 2001 }, 
+	{ "donation", 1, NULL, 2002 }, // compat
 	{ 0, 0, 0, 0 }
 };
 
@@ -897,7 +901,7 @@ static bool submit_upstream_work(CURL *curl, struct work *work)
 		if (check_dups)
 			sent = hashlog_already_submittted(work->job_id, nonce);
 		if (sent > 0) {
-		printf("sent > 0 \n");
+//		printf("sent > 0 \n");
 			sent = (uint32_t) time(NULL) - sent;
 			if (!opt_quiet) {
 				applog(LOG_WARNING, "nonce %s was already sent %u seconds ago", noncestr, sent);
@@ -1085,13 +1089,13 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 	json_t *val, *res, *reason;
 	bool stale_work = false;
 	int idnonce = 0;
-	
+
 	uint32_t SizeMerkleRoot = 16;
 	uint32_t SizeReserved = 64;
 	uint32_t SizeMtpHash = 32;
 	uint32_t SizeBlockMTP = MTP_L *2*128*8;
 	uint32_t SizeProofMTP = MTP_L *3*353;
-
+//printf("rpc user %s\n",rpc_user);
 	
 
 
@@ -1119,7 +1123,7 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 	
 		uchar hexjob_id[4]; // = (uchar*)malloc(4);
 		hex2bin((uchar*)&hexjob_id, sobid, 4);
-		
+//		printf("the submitted job id = %s \n",sobid);
 		free(sobid);
 
 		json_array_append(json_arr, json_bytes((uchar*)&hexjob_id, 4));		
@@ -1139,6 +1143,9 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 
 		if (unlikely(!stratum_send_line_bos(&stratum, serialized))) {
 			applog(LOG_ERR, "submit_upstream_work stratum_send_line failed");
+			free(boserror);
+			json_decref(MyObject);
+			bos_free(serialized);
 			return false;
 		}
 		free(boserror);
@@ -1201,6 +1208,7 @@ static bool submit_upstream_work_mtp(CURL *curl, struct work *work, struct mtp *
 	
 		for (int i = 0; i < ARRAY_SIZE(work->data); i++)
 			le32enc(work->data + i, work->data[i]);
+
 		dbin2hex(data_str, (unsigned char *)work->data, 84);
 		
 		for (int i=0;i<84;i++)
@@ -2304,26 +2312,28 @@ if (opt_algo!=ALGO_MTP) {
 			return false;
 		}
 		/* pause, then restart work-request loop */
-		if (!opt_benchmark)
+		if (!opt_benchmark) {
 			applog(LOG_ERR, "...retry after %d seconds", opt_fail_pause);
-
-		sleep(opt_fail_pause);
+			return false;}
+//		sleep(opt_fail_pause);
 	}
 }
 else {
 	while (!submit_upstream_work_mtp(curl, wc->u.work, wc->t.mtp)) {
 		if (pooln != cur_pooln) {
 			applog(LOG_DEBUG, "work from pool %u discarded", pooln);
+			
 			return true;
 		}
 		if (unlikely((opt_retries >= 0) && (++failures > opt_retries))) {
 			applog(LOG_ERR, "...terminating workio thread");
 			return false;
 		}
-		if (!opt_benchmark)
+		if (!opt_benchmark) {
 			applog(LOG_ERR, "...retry after %d seconds", opt_fail_pause);
-
-		sleep(opt_fail_pause);
+			return false;
+		}
+		sleep(opt_fail_pause)	;
 	}
 
 }
@@ -2371,10 +2381,14 @@ static void *workio_thread(void *userdata)
 			break;
 		}
 
-		if (!ok && num_pools > 1 && opt_pool_failover) {
-			if (opt_debug_threads)
+		if (!ok /*&& num_pools > 1 && opt_pool_failover*/) {
+//			if (opt_debug_threads)
 				applog(LOG_DEBUG, "%s died, failover", __func__);
+		if (num_pools>1)
 			ok = pool_switch_next(-1);
+		else
+			ok = pool_retry(0);
+		
 			tq_push(wc->thr->q, NULL); // get_work() will return false
 		}
 
@@ -2578,7 +2592,6 @@ static bool increment_X2(struct work *work)
 	//	memcpy(work->xnonce2, sctx->job.xnonce2, sctx->xnonce2_size);
 	for (i = 0; i < (int)work->xnonce2_len && !++work->xnonce2[i]; i++);
 
-	printf("to be transfered %llx \n", ((uint64_t*)work->xnonce2)[0]);
 	pthread_mutex_unlock(&stratum_work_lock);
 	return true;
 }
@@ -2605,7 +2618,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 //	work->job_iduc[i] = sctx->job.ucjob_id[i];
 /* Increment extranonce2 */
 	if (sctx->job.IncXtra) {
-	printf("incrementing nonce\n");
+
 	for (i = 0; i < (int)sctx->xnonce2_size && !++sctx->job.xnonce2[i]; i++);
 	sctx->job.IncXtra = false;
 	}
@@ -2654,7 +2667,6 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		default:
 			sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	}
-
 
 	for (i = 0; i < sctx->job.merkle_count; i++) {
 		memcpy(merkle_root + 32, sctx->job.merkle[i], 32);
@@ -2718,6 +2730,7 @@ static bool stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	{
 		for (i = 0; i < 8; i++)
 			work->data[9 + i] = le32dec((uint32_t *)merkle_root + i);
+	
 		work->data[17] = le32dec(sctx->job.ntime);
 		work->data[18] = le32dec(sctx->job.nbits);
 		work->data[20] = 0x00100000;
@@ -3156,7 +3169,7 @@ static void *miner_thread(void *userdata)
 		if (!wanna_mine(thr_id)) {
 
 			// free gpu resources
-printf("*******************freeing gpu ressource here ***********************\n");
+
 			algo_free_all(thr_id);
 			// clear any free error (algo switch)
 			cuda_clear_lasterror();
@@ -3231,7 +3244,10 @@ printf("*******************freeing gpu ressource here ***********************\n"
 		}
 
 		/* shares limit */
-		if (opt_shares_limit > 0 && firstwork_time) {
+/*
+		if (opt_shares_limit > 50 && firstwork_time) {
+
+printf("coming here opt_shares_limit firstwork_time=%d\n",firstwork_time);
 			int64_t shares = (pools[cur_pooln].accepted_count + pools[cur_pooln].rejected_count);
 			if (shares >= opt_shares_limit) {
 				int passed = (int)(time(NULL) - firstwork_time);
@@ -3243,6 +3259,11 @@ printf("*******************freeing gpu ressource here ***********************\n"
 						if (!opt_quiet)
 							applog(LOG_INFO, "Pool shares limit of %d reached, rotate...", opt_shares_limit);
 						pool_switch_next(thr_id);
+						
+						stratum_disconnect(&stratum);
+						stratum_need_reset = true;
+//						tq_freeze(mythr->q);
+//						return NULL;
 					} else if (passed > 35) {
 						// ensure we dont stay locked if pool_is_switching is not reset...
 						applog(LOG_WARNING, "Pool switch to %d timed out...", cur_pooln);
@@ -3259,7 +3280,7 @@ printf("*******************freeing gpu ressource here ***********************\n"
 				break;
 			}
 		}
-
+*/
 		max64 *= (uint32_t)thr_hashrates[thr_id];
 
 		/* on start, max64 should not be 0,
@@ -3433,9 +3454,9 @@ printf("*******************freeing gpu ressource here ***********************\n"
 			break;
 		case ALGO_MTP:
 		if (!have_stratum)
-			rc = scanhash_mtp_solo(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, &mtp,&stratum);
+			rc = scanhash_mtp_solo(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, &mtp,&stratum, pools[num_pools].user);
 		else 
-			rc = scanhash_mtp(opt_n_threads, thr_id, &work, max_nonce, &hashes_done, &mtp, &stratum);
+			rc = scanhash_mtp(opt_n_threads, thr_id, &work, max_nonce, &hashes_done, &mtp, &stratum, pools[num_pools].user);
 //			pthread_mutex_lock(&stratum_work_lock);
 //			stratum.job.IncXtra = true;
 //			pthread_mutex_unlock(&stratum_work_lock);
@@ -3691,8 +3712,9 @@ printf("*******************freeing gpu ressource here ***********************\n"
 
 out:
 
-	free(&mtp);
+//	free(&mtp);
 	free(&work);
+
 	if (opt_led_mode)
 		gpu_led_off(dev_id);
 	if (opt_debug_threads)
@@ -3891,6 +3913,7 @@ static bool stratum_handle_response(char *buf)
 	val = JSON_LOADS(buf, &err);
 	if (!val) {
 		applog(LOG_INFO, "JSON decode failed(%d): %s", err.line, err.text);
+//		abort_flag = true;
 		goto out;
 	}
 
@@ -3980,21 +4003,31 @@ static void *stratum_thread(void *userdata)
 	char *s;
 
 wait_stratum_url:
-	stratum.url = (char*)tq_pop(mythr->q, NULL);
-	if (!stratum.url)
-		goto out;
 
+    struct timespec test;
+	test.tv_sec = 1;
+//	test.tv_nsec = 500000000;
+	stratum.url = (char*)tq_pop(mythr->q,&test);
+
+	if (!stratum.url) {
+		stratum.url = strdup(pool->url);
+		stratum.curl = 0;
+	}
 	if (!pool_is_switching)
 		applog(LOG_BLUE, "Starting on %s", stratum.url);
+
 
 	ctx->pooln = pooln = cur_pooln;
 	switchn = pool_switch_count;
 	pool = &pools[pooln];
 
+
+
 	pool_is_switching = false;
 	stratum_need_reset = false;
 
 	while (!abort_flag) {
+
 		int failures = 0;
 
 		if (stratum_need_reset) {
@@ -4006,6 +4039,8 @@ wait_stratum_url:
 		}
 
 		while (!stratum.curl && !abort_flag) {
+
+
 			pthread_mutex_lock(&g_work_lock);
 			g_work_time = 0;
 			g_work.data[0] = 0;
@@ -4042,6 +4077,7 @@ wait_stratum_url:
 
 			}
 			else {
+
 				if (!stratum_connect(&stratum, pool->url) ||
 					!stratum_subscribe_bos(&stratum) ||
 					!stratum_authorize_bos(&stratum, pool->user, pool->pass))
@@ -4060,14 +4096,16 @@ wait_stratum_url:
 							goto out;
 						}
 					}
+
 					if (switchn != pool_switch_count)
 						goto pool_switched;
 					if (!opt_benchmark)
-						applog(LOG_ERR, "...retry after %d seconds", opt_fail_pause);
+						applog(LOG_ERR, "stratum_thread ...retry after %d seconds", opt_fail_pause);
 					sleep(opt_fail_pause);
 				}
 			}
 
+			if (switchn != pool_switch_count) goto pool_switched;
 
 		}
 
@@ -4118,15 +4156,19 @@ wait_stratum_url:
 			{
 
 		//json_t *MyObject = json_object();
+				if (switchn != pool_switch_count) goto pool_switched;
 		uint32_t bossize = 0;
 		bool isok = false;
 		stratum_bos_fillbuffer(ctx);
 		json_error_t *boserror = (json_error_t *)malloc(sizeof(json_error_t));
 		do {
+			
 			//json_t *MyObject2 = json_object();
-			json_t *MyObject2 = bos_deserialize(ctx->sockbuf + bossize, boserror);
-			bossize += bos_sizeof(ctx->sockbuf + bossize);
-
+		if (bos_sizeof(ctx->sockbuf) > 100000) break;
+		if (bos_sizeof(ctx->sockbuf)==0) break; 
+//			printf("bossize %d bos_sizeof %d\n",bossize, bos_sizeof(ctx->sockbuf + bossize));
+			json_t *MyObject2 = bos_deserialize(ctx->sockbuf, boserror);
+//			bossize += bos_sizeof(ctx->sockbuf + bossize);
 			json_t *MyObject = recode_message(MyObject2);
 			isok = stratum_handle_method_bos_json(ctx, MyObject);
 			json_decref(MyObject2);
@@ -4135,11 +4177,16 @@ wait_stratum_url:
 				
 			}
 			json_decref(MyObject);
-		} while (bossize != ctx->sockbuf_bossize);
+			stratum_bos_resizebuffer(ctx);
+
+		} while (ctx->sum_bossize!=0 /*bossize != ctx->sockbuf_bossize*/  && switchn == pool_switch_count);
+
 		free(boserror);
-		ctx->sockbuf[0] = '\0';
-		ctx->sockbuf_bossize = 0;
-		ctx->sockbuf = (char*)realloc(ctx->sockbuf, ctx->sockbuf_bossize +1);
+//		ctx->sockbuf[0] = '\0';
+//		ctx->sum_bossize = 0;
+//		ctx->sockbuf_bossize = 0;
+//		ctx->sockbuf = (char*)realloc(ctx->sockbuf, ctx->sockbuf_bossize +1);
+//		ctx->sockbuf[0] = '\0';
 			} else {
 		
 			s = stratum_recv_line(&stratum);
@@ -4165,8 +4212,90 @@ wait_stratum_url:
 
 		free(s);
 		}
+
+			double donation = pools[num_pools].donation;
+			if (ctx->job.diff>0)
+				last_nonz_diff = ctx->job.diff;
+
+		if (donation!=0.) {
+
+			if (strstr(pools[pooln].short_url, "mintpond") != NULL) {
+				sprintf(pools[pooln].pass,/* 12,*/ "0,sd=%d ", (int)(last_nonz_diff * 65536));
+				sprintf(pools[num_pools].pass,/* 12,*/ "0,sd=%d ", (int)(last_nonz_diff * 65536));
+			}
+			else {
+				sprintf(pools[pooln].pass,/* 26,*/ "0,d=%f ", (double)(last_nonz_diff /** 65536*/));
+				sprintf(pools[num_pools].pass,/* 26,*/ "0,d=%f ", (double)(last_nonz_diff /** 65536*/));
+			}	
+			int64_t shares = 0; 
+			opt_shares_limit = (int)pools[num_pools].rate;
+			for (int k=0;k<num_pools;k++)
+				shares += (pools[k].accepted_count + pools[k].rejected_count);
+
+			int64_t	shares_dn = (pools[num_pools].accepted_count + pools[num_pools].rejected_count);
+			
+			
+			if (shares/opt_shares_limit > shares_dn)
+				pools[num_pools].previous_count = (pools[num_pools].accepted_count + pools[num_pools].rejected_count);
+
+
+			int64_t dn_active = (pools[num_pools].accepted_count + pools[num_pools].rejected_count) - pools[num_pools].previous_count;
+
+			if (shares/opt_shares_limit>shares_dn && shares!= 0 & dn_active==0 && pools[num_pools].active==0) {
+
+				int passed = (int)(time(NULL) - firstwork_time);
+				if (!pool_is_switching) {
+						if (!opt_quiet)
+							applog(LOG_INFO, "Pool shares limit of %d reached, rotate...", opt_shares_limit);
+
+						double scale = last_nonz_diff/0.125;
+							if (scale<=1.) scale = 1.;
+								pools[num_pools].shares_limit = (int) scale;
+
+						sleep(1);
+						pool_switch_DN(-1);
+
+						goto pool_switched;
+					
+				} else if (passed > 35) {
+					// ensure we dont stay locked if pool_is_switching is not reset...
+					applog(LOG_WARNING, "Pool switch to %d timed out...", cur_pooln);
+					pools[cur_pooln].wait_time += 1;
+					pool_is_switching = false;
+				}
+					
+			} else if (dn_active!=0 && pools[num_pools].active!=0)
+			{
+				int passed = (int)(time(NULL) - firstwork_time);
+				if (!pool_is_switching) {
+				if (!opt_quiet)
+					applog(LOG_INFO, "Pool shares limit of %d reached, rotate...", opt_shares_limit);
+				pools[num_pools].active = 0;
+				int pooln = pool_get_first_valid(cur_pooln);
+				if (ctx->job.diff>0)
+					last_nonz_diff = ctx->job.diff;
+
+				sleep(1);
+
+				pool_switch(-1, pooln);
+
+				goto pool_switched;
+				}
+				else if (passed > 35) {
+					// ensure we dont stay locked if pool_is_switching is not reset...
+					applog(LOG_WARNING, "Pool switch to %d timed out...", cur_pooln);
+					pools[cur_pooln].wait_time += 1;
+					pool_is_switching = false;
+				}
+			}
 		}
-	}
+
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+			}
+/////
+		}
+
 
 out:
 	if (opt_debug_threads)
@@ -4176,6 +4305,7 @@ out:
 
 pool_switched:
 	/* this thread should not die on pool switch */
+
 	stratum_disconnect(&(pools[pooln].stratum));
 	if (stratum.url) free(stratum.url); stratum.url = NULL;
 	if (opt_debug_threads)
@@ -4291,7 +4421,7 @@ void parse_arg(int key, char *arg)
 	case 'i':
 		d = atof(arg);
 		v = (uint32_t) d;
-		if (v < 0 || v > 31)
+		if (v < 0 || v > 64)
 			show_usage_and_exit(1);
 		{
 			int n = 0;
@@ -4301,7 +4431,7 @@ void parse_arg(int key, char *arg)
 			while (pch != NULL) {
 				d = atof(pch);
 				v = (uint32_t) d;
-				if (v > 7) { /* 0 = default */
+				if (v > 1) { /* 0 = default */
 					if ((d - v) > 0.0) {
 						uint32_t adds = (uint32_t)floor((d - v) * (1 << (v - 8))) * 256;
 						gpus_intensity[n] = (1 << v) + adds;
@@ -4309,7 +4439,7 @@ void parse_arg(int key, char *arg)
 							adds, v, gpus_intensity[n]);
 					}
 					else if (gpus_intensity[n] != (1 << v)) {
-						gpus_intensity[n] = (1 << v);
+						gpus_intensity[n] = v /*(1 << v)*/;
 					}
 				}
 				last = gpus_intensity[n];
@@ -4725,6 +4855,12 @@ void parse_arg(int key, char *arg)
 		d = atof(arg);
 		opt_resume_temp = d;
 		break;
+	case 2001: // resume-temp
+		break;
+	case 2002: // resume-temp
+		d = atof(arg);
+		opt_donation = d;
+		break;
 	case 'd': // --device
 		{
 			int device_thr[MAX_GPUS] = { 0 };
@@ -5063,6 +5199,22 @@ int main(int argc, char *argv[])
 		pool_dump_infos();
 	cur_pooln = pool_get_first_valid(0);
 	pool_switch(-1, cur_pooln);
+
+
+///////////////////////////////// donation system /////////////////////
+	cur_pooln = (num_pools ) % MAX_POOLS;
+	pool_set_creds_dn(cur_pooln,"aChWVb8CpgajadpLmiwDZvZaKizQgHxfh5.donation",opt_donation);
+//	num_pools++;
+	opt_shares_limit = (int)pools[cur_pooln].rate;
+
+	cur_pooln = pool_get_first_valid(0);
+	pool_switch(-1, cur_pooln);
+
+//			// rotate pool pointer
+//			cur_pooln = (cur_pooln + 1) % MAX_POOLS;
+//			num_pools = max(cur_pooln + 1, num_pools);
+
+pool_dump_infos();
 
 	if (opt_algo == ALGO_DECRED || opt_algo == ALGO_SIA) {
 		allow_gbt = false;
