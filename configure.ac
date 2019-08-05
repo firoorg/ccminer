@@ -170,7 +170,8 @@ elif test "${CUDA_VER#*$VERSION92}" != "$CUDA_VER"
 then
         CUDA_LIBS="$CUDA_LIBS compat/libs/x64/libgpu92.a"
         echo "found $VERSION92"
-        echo $CUDA_LIBS                                                                                                                                                     else
+        echo $CUDA_LIBS
+else
         echo "unsupported version contact dev"
 fi
 
