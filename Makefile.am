@@ -82,12 +82,12 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  x11/c11.cu x11/s3.cu x11/sib.cu x11/veltor.cu x11/cuda_streebog.cu \
 			  cuda_mtp/mtp.cu
 
-# scrypt
-ccminer_SOURCES += scrypt.cpp scrypt-jane.cpp \
-    scrypt/blake.cu scrypt/keccak.cu scrypt/sha256.cu \
-    scrypt/salsa_kernel.cu scrypt/test_kernel.cu \
-    scrypt/fermi_kernel.cu scrypt/kepler_kernel.cu \
-    scrypt/nv_kernel.cu scrypt/nv_kernel2.cu scrypt/titan_kernel.cu
+# scrypt no more
+# ccminer_SOURCES += scrypt.cpp scrypt-jane.cpp \
+#    scrypt/blake.cu scrypt/keccak.cu scrypt/sha256.cu \
+#    scrypt/salsa_kernel.cu scrypt/test_kernel.cu \
+#    scrypt/fermi_kernel.cu scrypt/kepler_kernel.cu \
+#    scrypt/nv_kernel.cu scrypt/nv_kernel2.cu scrypt/titan_kernel.cu
 
 if HAVE_NVML
 nvml_defs = -DUSE_WRAPNVML
