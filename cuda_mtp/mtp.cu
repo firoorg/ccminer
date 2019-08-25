@@ -99,19 +99,13 @@ extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t
 
 
 	}
-//sleep(10);
-//cudaFreeHost(dx[thr_id]);
-//printf("freed\n");
-//sleep(60);
+
 	uint32_t _ALIGN(128) endiandata[20];
 	((uint32_t*)pdata)[19] = (pdata[20]); //*/0x00100000; // mtp version not the actual nonce
-//	((uint32_t*)pdata)[19] = 0x1000;
-// change from data[17] to data[16] to avoid case where the merkle tree is modified but not the job id
-//printf("pdata ");
+
 	for (int k = 0; k < 20; k++) {
 		endiandata[k] = pdata[k];
-//		printf(" %08x ",pdata[k]);
-}
+	}
 //printf(" \n ");
 if (JobId[thr_id] != work->data[16] || XtraNonce2[thr_id] != ((uint64_t*)work->xnonce2)[0]) {
 //printf("reinit mtp gpu work->data[16]=%08x JobId = %08x \n", work->data[16], JobId[thr_id]);
@@ -161,27 +155,7 @@ argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
 	root.resize(0);
 }
 
-/*
-if (fillGpu[thr_id]) {
 
-printf("filling memory\n");
-const int datachunk = 512;
-for (int i = 0; i<((uint32_t)memcost / datachunk) // && !work_restart[thr_id].restart; i++) {
-	uint64_t *Truc = (uint64_t *)malloc(128 * datachunk * sizeof(uint64_t));
-
-	for (int j = 0; j<datachunk; j++)
-		memcpy(&Truc[128 * j], instance.memory[datachunk*i + j].v, 128 * sizeof(uint64_t));
-	
-		mtp_fill(thr_id, Truc, i, datachunk);
-
-	free(Truc);
-}
-printf("memory filled \n");
-fillGpu[thr_id]=false;
-}
-
-*/
-//	if (work_restart[thr_id].restart) goto TheEnd;
 		pdata[19] = first_nonce;
 //do  {
 //		printf("work->data[17]=%08x\n", work->data[17]);
@@ -291,35 +265,37 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 
 	if (!init[thr_id])
 	{
-		int dev_id = device_map[thr_id];;
+
+		int dev_id = device_map[thr_id];
 		cudaSetDevice(dev_id);
 
 		cudaDeviceReset();
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+
 		//		cudaSetDeviceFlags(cudaDeviceScheduleYield);
-		//		cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte);
-		int intensity = 20;
-		throughput = cuda_default_throughput(thr_id, 1U << intensity); // 18=256*256*4;
-																	   //		throughput =  1024*64;
-		if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
-		
+		//		cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte); 
+
+		//		intensity = cuda_default_throughput(thr_id, intensity); // 18=256*256*4;	
+
 		cudaDeviceProp props;
 		cudaGetDeviceProperties(&props, dev_id);
-		throughput = props.multiProcessorCount * 128 * 320 * 4;
+		int intensity = 20;
+		if (props.major == 7)
+			intensity = 24;
+
+		uint32_t tpb_mtp = get_tpb_mtp(thr_id);
+		throughput = cuda_default_throughput_mtp(thr_id, intensity, props.multiProcessorCount, tpb_mtp);
+
 		//		cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
-		gpulog(LOG_INFO, thr_id, "Solo Mode: Intensity set to %g, %u cuda threads", throughput2intensity(throughput), throughput);
-
-
-		mtp_cpu_init(thr_id, throughput,prot);
-
+		gpulog(LOG_INFO, thr_id, "Solo Mode: Intensity set to %g, %u cuda threads number of multiproc %d",
+			throughput2intensity(throughput), throughput, props.multiProcessorCount);
+		mtp_cpu_init(thr_id, throughput, prot);
+		//		cudaProfilerStop();
 		init[thr_id] = true;
 
 
 	}
-	//sleep(10);
-	//cudaFreeHost(dx[thr_id]);
-	//printf("freed\n");
-	//sleep(60);
+
 	uint32_t _ALIGN(128) endiandata[20];
 	((uint32_t*)pdata)[19] = (pdata[20]); //*/0x00100000; // mtp version not the actual nonce
 										  //	((uint32_t*)pdata)[19] = 0x1000;
@@ -343,17 +319,17 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 		context[thr_id] = init_argon2d_param((const char*)endiandata);
 
 		argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
-		mtp_fill_1b(thr_id, instance[thr_id].memory[0 + 0].v, 0 + 0);
-		mtp_fill_1b(thr_id, instance[thr_id].memory[0 + 1].v, 0 + 1);
-		mtp_fill_1b(thr_id, instance[thr_id].memory[2 + 0].v, 1048576 + 0);
-		mtp_fill_1b(thr_id, instance[thr_id].memory[2 + 1].v, 1048576 + 1);
-		mtp_fill_1b(thr_id, instance[thr_id].memory[4 + 0].v, 2097152 + 0);
-		mtp_fill_1b(thr_id, instance[thr_id].memory[4 + 1].v, 2097152 + 1);
-		mtp_fill_1b(thr_id, instance[thr_id].memory[6 + 0].v, 3145728 + 0);
-		mtp_fill_1b(thr_id, instance[thr_id].memory[6 + 1].v, 3145728 + 1);
-		mtp_i_cpu(thr_id, instance[thr_id].block_header);
 
-		//	printf("Step 1 : Compute F(I) and store its T blocks X[1], X[2], ..., X[T] in the memory \n");
+		mtp_fill_1c(thr_id, instance[thr_id].memory[0 + 0].v, 0 + 0);
+		mtp_fill_1c(thr_id, instance[thr_id].memory[0 + 1].v, 0 + 1);
+		mtp_fill_1c(thr_id, instance[thr_id].memory[2 + 0].v, 1048576 + 0);
+		mtp_fill_1c(thr_id, instance[thr_id].memory[2 + 1].v, 1048576 + 1);
+		mtp_fill_1c(thr_id, instance[thr_id].memory[4 + 0].v, 2097152 + 0);
+		mtp_fill_1c(thr_id, instance[thr_id].memory[4 + 1].v, 2097152 + 1);
+		mtp_fill_1c(thr_id, instance[thr_id].memory[6 + 0].v, 3145728 + 0);
+		mtp_fill_1c(thr_id, instance[thr_id].memory[6 + 1].v, 3145728 + 1);
+
+		mtp_i_cpu2(thr_id, instance[thr_id].block_header);
 
 		get_tree(thr_id, dx[thr_id]);
 
