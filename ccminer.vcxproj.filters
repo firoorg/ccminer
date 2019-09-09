@@ -886,6 +886,9 @@
     <CudaCompile Include="cuda_mtp\mtp.cu">
       <Filter>Source Files\CUDA\mtp</Filter>
     </CudaCompile>
+    <CudaCompile Include="cuda_mtp\cuda_mtp_forlib.cu">
+      <Filter>Source Files\CUDA\mtp</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\ccminer.ico">

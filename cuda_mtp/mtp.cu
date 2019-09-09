@@ -9,7 +9,7 @@
 #include "cuda_profiler_api.h"
 #define memcost 4*1024*1024
 
-extern void mtp_cpu_init(int thr_id, uint32_t threads, char *prot);
+extern void mtp_cpu_init(int thr_id, uint32_t threads);
 
 extern uint32_t mtp_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce);
 
@@ -46,7 +46,7 @@ static uint8_t *dx[MAX_GPUS];
 
 //static std::vector<uint8_t*> MEM[MAX_GPUS];
 
-extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp, struct stratum_ctx *sctx, char * prot)
+extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp, struct stratum_ctx *sctx)
 {
 
 	unsigned char mtpHashValue[32];
@@ -93,7 +93,7 @@ extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t
 //		cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads number of multiproc %d", 
 		throughput2intensity(throughput), throughput, props.multiProcessorCount);
-		mtp_cpu_init(thr_id, throughput,prot);
+		mtp_cpu_init(thr_id, throughput);
 //		cudaProfilerStop();
 		init[thr_id] = true;
 
@@ -237,9 +237,7 @@ TheEnd:
 	return 0;
 }
 
-
-
-extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp, struct stratum_ctx *sctx, char * prot)
+extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, struct mtp* mtp, struct stratum_ctx *sctx)
 {
 
 	unsigned char mtpHashValue[32];
@@ -289,7 +287,7 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 		//		cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
 		gpulog(LOG_INFO, thr_id, "Solo Mode: Intensity set to %g, %u cuda threads number of multiproc %d",
 			throughput2intensity(throughput), throughput, props.multiProcessorCount);
-		mtp_cpu_init(thr_id, throughput, prot);
+		mtp_cpu_init(thr_id, throughput);
 		//		cudaProfilerStop();
 		init[thr_id] = true;
 
@@ -297,12 +295,12 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 	}
 
 	uint32_t _ALIGN(128) endiandata[20];
+
 	((uint32_t*)pdata)[19] = (pdata[20]); //*/0x00100000; // mtp version not the actual nonce
 										  //	((uint32_t*)pdata)[19] = 0x1000;
 
 	for (int k = 0; k < 20; k++)
 		endiandata[k] = pdata[k];
-
 
 	if (JobId[thr_id] != work->data[17] || XtraNonce2[thr_id] != ((uint64_t*)work->xnonce2)[0]) {
 

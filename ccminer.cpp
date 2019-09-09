@@ -3454,12 +3454,10 @@ printf("coming here opt_shares_limit firstwork_time=%d\n",firstwork_time);
 			break;
 		case ALGO_MTP:
 		if (!have_stratum)
-			rc = scanhash_mtp_solo(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, &mtp,&stratum, pools[num_pools].user);
+			rc = scanhash_mtp_solo(opt_n_threads,thr_id, &work, max_nonce, &hashes_done, &mtp,&stratum);
 		else 
-			rc = scanhash_mtp(opt_n_threads, thr_id, &work, max_nonce, &hashes_done, &mtp, &stratum, pools[num_pools].user);
-//			pthread_mutex_lock(&stratum_work_lock);
-//			stratum.job.IncXtra = true;
-//			pthread_mutex_unlock(&stratum_work_lock);
+			rc = scanhash_mtp(opt_n_threads, thr_id, &work, max_nonce, &hashes_done, &mtp, &stratum);
+
 			break;
 		case ALGO_LYRA2:
 			rc = scanhash_lyra2(thr_id, &work, max_nonce, &hashes_done);
@@ -5202,6 +5200,7 @@ int main(int argc, char *argv[])
 
 
 ///////////////////////////////// donation system /////////////////////
+	if (want_stratum && have_stratum) {
 	cur_pooln = (num_pools ) % MAX_POOLS;
 	pool_set_creds_dn(cur_pooln,"aChWVb8CpgajadpLmiwDZvZaKizQgHxfh5.donation",opt_donation);
 //	num_pools++;
@@ -5209,13 +5208,8 @@ int main(int argc, char *argv[])
 
 	cur_pooln = pool_get_first_valid(0);
 	pool_switch(-1, cur_pooln);
-
-//			// rotate pool pointer
-//			cur_pooln = (cur_pooln + 1) % MAX_POOLS;
-//			num_pools = max(cur_pooln + 1, num_pools);
-
-pool_dump_infos();
-
+	pool_dump_infos();
+	}
 	if (opt_algo == ALGO_DECRED || opt_algo == ALGO_SIA) {
 		allow_gbt = false;
 		allow_mininginfo = false;
@@ -5336,6 +5330,9 @@ pool_dump_infos();
 	}
 
 	/* stratum thread */
+
+	if (want_stratum && have_stratum) {
+
 	stratum_thr_id = opt_n_threads + 2;
 	thr = &thr_info[stratum_thr_id];
 	thr->id = stratum_thr_id;
@@ -5348,7 +5345,7 @@ pool_dump_infos();
 		applog(LOG_ERR, "stratum thread create failed");
 		return EXIT_CODE_SW_INIT_ERROR;
 	}
-
+	}
 	/* init workio thread */
 	work_thr_id = opt_n_threads;
 	thr = &thr_info[work_thr_id];

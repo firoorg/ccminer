@@ -80,7 +80,7 @@ ccminer_SOURCES	= elist.h miner.h compat.h \
 			  x15/whirlpool.cu \
 			  x17/x17.cu x17/cuda_x17_haval256.cu x17/cuda_x17_sha512.cu \
 			  x11/c11.cu x11/s3.cu x11/sib.cu x11/veltor.cu x11/cuda_streebog.cu \
-			  cuda_mtp/mtp.cu
+			  cuda_mtp/mtp.cu cuda_mtp/cuda_mtp_forlib.cu
 
 # scrypt no more
 # ccminer_SOURCES += scrypt.cpp scrypt-jane.cpp \

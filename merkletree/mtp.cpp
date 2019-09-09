@@ -699,6 +699,7 @@ int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 			uint32_t prev_index;
 			uint32_t ref_index;
 			getblockindex(thr_id, ij, instance, &prev_index, &ref_index);
+//			printf("L=%d ij %d prev_index %d ref_index %d",j,ij,prev_index,ref_index);
 
 			//			copy_blockS(&nBlockMTP[j * 2 - 2], &instance->memory[prev_index]);
 			get_block(thr_id, /*(uint8_t*)*/nBlockMTP[j * 2 - 2].v, prev_index);

@@ -1,4 +1,4 @@
-AC_INIT([ccminer], [1.2.01-djm34], [], [ccminer], [http://github.com/zcoinofficial/ccminer])
+AC_INIT([ccminer], [1.2.2-djm34], [], [ccminer], [http://github.com/zcoinofficial/ccminer])
 
 AC_PREREQ([2.59c])
 AC_CANONICAL_SYSTEM
@@ -149,30 +149,6 @@ fi
 if test -n "$with_nvml" ; then
   NVML_LIBPATH=$with_nvml
   CUDA_LDFLAGS="$CUDA_LDFLAGS -ldl"
-fi
-
-CUDA_VER="`$NVCC --version | grep release`"
-echo $CUDA_VER
-VERSION101="10.1"
-VERSION100="10.0"
-VERSION92="9.2"
-if test "${CUDA_VER#*$VERSION101}" != "$CUDA_VER"
-then
-        CUDA_LIBS="$CUDA_LIBS compat/libs/x64/libgpu101.a"
-        echo "found $VERSION101"
-        echo $CUDA_LIBS
-elif test "${CUDA_VER#*$VERSION100}" != "$CUDA_VER"
-then
-        CUDA_LIBS="$CUDA_LIBS compat/libs/x64/libgpu100.a"
-        echo "found $VERSION100"
-        echo $CUDA_LIBS
-elif test "${CUDA_VER#*$VERSION92}" != "$CUDA_VER"
-then
-        CUDA_LIBS="$CUDA_LIBS compat/libs/x64/libgpu92.a"
-        echo "found $VERSION92"
-        echo $CUDA_LIBS
-else
-        echo "unsupported version contact dev"
 fi
 
 AC_SUBST(NVML_LIBPATH)
