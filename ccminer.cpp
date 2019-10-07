@@ -4002,10 +4002,11 @@ static void *stratum_thread(void *userdata)
 
 wait_stratum_url:
 
-    struct timespec test;
-	test.tv_sec = 1;
+//   struct timespec test;
+//	test.tv_sec = 1;
 //	test.tv_nsec = 500000000;
-	stratum.url = (char*)tq_pop(mythr->q,&test);
+//	stratum.url = (char*)tq_pop(mythr->q,&test);
+	stratum.url = (char*)tq_pop(mythr->q, NULL);
 
 	if (!stratum.url) {
 		stratum.url = strdup(pool->url);
