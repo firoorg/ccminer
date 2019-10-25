@@ -1741,8 +1741,8 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		printf("mn script %d", json_string_value(mnscript));
 */
 		}
-
 		cbvalue = (int64_t)(json_is_integer(tmp) ? json_integer_value(tmp) : json_number_value(tmp));
+		cbvalue = (uint32_t)cbvalue - (uint32_t)7000000;
 		cbtx = (uchar*)malloc(256*256);
 		le32enc((uint32_t *)cbtx, 1); // version /
 		cbtx[4] = 1; // in-counter /
@@ -1760,7 +1760,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		le32enc((uint32_t *)(cbtx + cbtx_size), 0xffffffff); // sequence /
 		cbtx_size += 4;
 		
-		cbtx[cbtx_size++] = (mpay && json_integer_value(mnamount)!=0)? 7:6; // out-counter /
+		cbtx[cbtx_size++] = (mpay && json_integer_value(mnamount)!=0)? 8:7; // out-counter /
 
 		le32enc((uint32_t *)(cbtx + cbtx_size), (uint32_t)cbvalue); // value /
 		le32enc((uint32_t *)(cbtx + cbtx_size + 4), cbvalue >> 32);
@@ -1784,6 +1784,7 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		char coinb3[74] = { 0 };
 		char coinb4[74] = { 0 };
 		char coinb5[74] = { 0 };
+		char coinb51[74] = { 0 };
 		char coinb6[74] = { 0 };
 		char coinb7[90] = { 0 };
 		char script_payee[1024];
@@ -1806,6 +1807,8 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 		base58_decode("a1kCCGddf5pMXSipLVD9hBG2MGGVNaJ15U", script_payee);
 		job_pack_tx(coinb5, 50000000, script_payee);
 
+		base58_decode("aChWVb8CpgajadpLmiwDZvZaKizQgHxfh5", script_payee);
+		job_pack_tx(coinb51, 7000000, script_payee);
 /*		
 		// for testnet with znode payment
 		base58_decode("TDk19wPKYq91i18qmY6U9FeTdTxwPeSveo", script_payee);
@@ -1852,6 +1855,9 @@ static bool gbt_work_decode_mtp(const json_t *val, struct work *work)
 
 		hex2bin(cbtx + cbtx_size, coinb5, strlen(coinb5));
 		cbtx_size = cbtx_size + (int)((strlen(coinb5)) / 2);
+
+		hex2bin(cbtx + cbtx_size, coinb51, strlen(coinb51));
+		cbtx_size = cbtx_size + (int)((strlen(coinb51)) / 2);
 
 		hex2bin(cbtx + cbtx_size, coinb6, strlen(coinb6));
 		cbtx_size = cbtx_size + (int)((strlen(coinb6)) / 2);

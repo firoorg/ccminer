@@ -74,11 +74,10 @@ extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t
 		cudaSetDevice(dev_id);
 		
 		cudaDeviceReset();
-		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 
-//		cudaSetDeviceFlags(cudaDeviceScheduleYield);
+		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
 //		cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte); 
-		
+		cudaProfilerStop();
 //		intensity = cuda_default_throughput(thr_id, intensity); // 18=256*256*4;	
 
 		cudaDeviceProp props;
@@ -161,10 +160,10 @@ argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
 //		printf("work->data[17]=%08x\n", work->data[17]);
 		uint32_t foundNonce;
 //		cudaProfilerStart();
-//		cudaProfilerStop();
+		cudaProfilerStop();
 		*hashes_done = pdata[19] - first_nonce + throughput;
 		foundNonce = mtp_cpu_hash_32(thr_id, throughput, pdata[19]);
-//		cudaProfilerStop();
+		cudaProfilerStop();
 		uint32_t _ALIGN(64) vhash64[8];
 		if (foundNonce != UINT32_MAX)
 		{
@@ -184,6 +183,7 @@ argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
 
 			uint32_t is_sol = mtp_solver(thr_id,foundNonce, &instance[thr_id], nBlockMTP,nProofMTP, TheMerkleRoot[thr_id], mtpHashValue, *ordered_tree[thr_id], endiandata,TheUint256Target[0]);
 
+			cudaDeviceSynchronize();
 			if (is_sol==1 /*&& fulltest(vhash64, ptarget)*/) {
 
 				int res = 1;
@@ -429,10 +429,7 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 	gpulog(LOG_INFO, thr_id, "%s: %.1f Kh/s nonce %08x ", device_name[device_map[thr_id]], hashrate / 1000., pdata[19]);
 
 		pdata[19] += throughput;
-		if (pdata[19] >= real_maxnonce) {
-			gpulog(LOG_WARNING, thr_id, "OUT OF NONCE %x >= %x incrementing extra nonce at next chance", pdata[19], real_maxnonce);
-			sctx->job.IncXtra = true;
-		}
+
 	} while (!work_restart[thr_id].restart && pdata[19]<real_maxnonce /*&& pdata[19]<(first_nonce+128*throughput)*/);
 
 TheEnd:
