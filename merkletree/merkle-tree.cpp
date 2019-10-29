@@ -46,7 +46,7 @@ void MerkleTree::Destructor()
 		delete[] mem[i];
 		mem.pop_back(); 
 	};
-	delete[] this;
+	delete this;
 //	mem.clear();
 //	mem.shrink_to_fit();
 
