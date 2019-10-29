@@ -93,6 +93,7 @@ extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t
 		gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads number of multiproc %d", 
 		throughput2intensity(throughput), throughput, props.multiProcessorCount);
 		mtp_cpu_init(thr_id, throughput);
+		cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
 //		cudaProfilerStop();
 		init[thr_id] = true;
 
@@ -113,12 +114,9 @@ if (JobId[thr_id] != work->data[16] || XtraNonce2[thr_id] != ((uint64_t*)work->x
 
 		free_memory(&context[thr_id], (unsigned char *)instance[thr_id].memory, instance[thr_id].memory_blocks, sizeof(block));
 		ordered_tree[thr_id]->Destructor();
-		cudaFreeHost(dx[thr_id]);
-
-		delete  ordered_tree[thr_id];
 
 	}
-	cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
+
  
 //	cudaProfilerStop();
 context[thr_id] = init_argon2d_param((const char*)endiandata);
@@ -288,6 +286,7 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 		gpulog(LOG_INFO, thr_id, "Solo Mode: Intensity set to %g, %u cuda threads number of multiproc %d",
 			throughput2intensity(throughput), throughput, props.multiProcessorCount);
 		mtp_cpu_init(thr_id, throughput);
+		cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
 		//		cudaProfilerStop();
 		init[thr_id] = true;
 
@@ -308,12 +307,8 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 
 			free_memory(&context[thr_id], (unsigned char *)instance[thr_id].memory, instance[thr_id].memory_blocks, sizeof(block));
 			ordered_tree[thr_id]->Destructor();
-			cudaFreeHost(dx[thr_id]);
-
-			delete  ordered_tree[thr_id];
-
 		}
-		cudaMallocHost(&dx[thr_id], sizeof(uint2) * 2 * 1048576 * 4);
+
 		context[thr_id] = init_argon2d_param((const char*)endiandata);
 
 		argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);

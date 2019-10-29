@@ -225,7 +225,7 @@ private :
     typedef std::deque<Elements> Layers;
 
     bool     preserveOrder_; /**< Whether to preserve the initial order */
-//    Elements elements_;      /**< Leaves of the Merkle Tree */
+    uint8_t* elements_;      /**< Leaves of the Merkle Tree */
 //    Layers   layers_;        /**< The various layers of the Merkle Tree */
 
 

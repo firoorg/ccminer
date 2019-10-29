@@ -17,59 +17,15 @@ std::ostream& operator<<(std::ostream& os, const MerkleTree::Buffer& buffer)
 }
 
 MerkleTree::MerkleTree(uint8_t * elements, bool preserveOrder)
-    : preserveOrder_(preserveOrder)//, elements_(elements)
+    : preserveOrder_(preserveOrder) /*, elements_(elements)*/
 {
-//   mem[0]=(elements);
-//	uint8_t* Truc(elements);
-	
-	mem.push_back(elements);
 
-/*
-printf("Init layer addr %lx\n",elements);
-	elements_.clear();
+	elements_ = new uint8_t[sizeof(elements)];
+	elements_ = elements;
+	mem.push_back(elements_);
 
-        for (int i = 0; i < (1024*1024*4) ; ++i) {
-                uint8_t *digest;
-                digest = &elements[MERKLE_TREE_ELEMENT_SIZE_B*i];
-                elements_.emplace_back(digest, digest + MERKLE_TREE_ELEMENT_SIZE_B);
-        }
-*/
-//for(;;);
-/*
-    if (elements.empty()) {
-        throw std::runtime_error("Empty elements list");
-    }
-
-    for (   Elements::const_iterator it = elements.begin();
-            it != elements.end();
-            ++it) {
-        if (it->empty()) {
-            continue; // ignore empty elements
-        }
-        if (it->size() != MERKLE_TREE_ELEMENT_SIZE_B) {
-            std::ostringstream oss;
-            oss << "Element size is " << it->size() << ", it must be "
-                << MERKLE_TREE_ELEMENT_SIZE_B;
-            throw std::runtime_error(oss.str());
-        }
-        if (!preserveOrder_) {
-            // Check that this element has not been pushed yet
-            if (std::find(elements_.begin(), elements_.end(), *it)
-                    != elements_.end()) {
-                continue; // ignore duplicates
-            }
-        }
-        elements_.push_back(*it);
-    } // for each element
-
-    if (!preserveOrder_) {
-        std::sort(elements_.begin(), elements_.end()); // sort elements
-    }
-*/
     getLayers();
-//uint64_t *mr=(uint64_t*)mem.back();
-//	printf("root %lx %lx\n",mr[0],mr[1]);
-//for(;;);
+
 }
 
 MerkleTree::MerkleTree()
@@ -83,9 +39,14 @@ MerkleTree::~MerkleTree()
 }
 void MerkleTree::Destructor()
 {
-	for(int i=1;i<mem.size();i++) { // element 0 is.... aaahh !!!
-		free(mem[i]);
-		};
+
+	uint32_t memsize = mem.size();
+	for (int i = memsize-1; i>=1; i--) { // element 0 is.... aaahh !!!
+//		free(this->mem[i]);
+		delete[] mem[i];
+		mem.pop_back(); 
+	};
+	delete[] this;
 //	mem.clear();
 //	mem.shrink_to_fit();
 
@@ -292,8 +253,8 @@ int size=1024*1024*4*16;
 for(int i=0;i<mem.size();i++)
 	size/=2;
 //printf("size %d %d %d\n",size, mem.size(), 1024*1024*4*16);
-uint8_t *new_mem=(uint8_t *)malloc(size);
-
+//uint8_t *new_mem=(uint8_t *)malloc(size);
+	uint8_t *new_mem = new uint8_t[size];
 gen_layer(prev_mem, new_mem, size/16);
 mem.push_back(new_mem);
 
