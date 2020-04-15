@@ -20,6 +20,8 @@
 //#include "merkletree/sha.h"
 
 //#include "openssl\sha.h"
+#include <cuda.h>
+#include <cuda_runtime.h>
 
 #include "uint256.h"
 //#include "serialize.h"
@@ -53,7 +55,7 @@ void mtp_hash(char* output, const char* input, unsigned int d, uint32_t TheNonce
 argon2_context init_argon2d_param(const char* input);
 void getblockindex_orig(uint32_t ij, argon2_instance_t *instance, uint32_t *out_ij_prev, uint32_t *out_computed_ref_block);
 
-void getblockindex(int thr_id, uint32_t ij, argon2_instance_t *instance, uint32_t *out_ij_prev, uint32_t *out_computed_ref_block);
+void getblockindex(int thr_id, uint32_t ij, argon2_instance_t *instance, uint32_t *out_ij_prev, uint32_t *out_computed_ref_block, cudaStream_t s0);
 
 
 //int mtp_solver_withblock(uint32_t TheNonce, argon2_instance_t *instance, unsigned int d, block_mtpProof *output,
@@ -65,7 +67,7 @@ int mtp_solver_orig(uint32_t TheNonce, argon2_instance_t *instance,
 
 int mtp_solver(int thr_id, uint32_t TheNonce, argon2_instance_t *instance,
 	blockS *nBlockMTP /*[72 * 2][128]*/, unsigned char *nProofMTP, unsigned char* resultMerkleRoot, unsigned char* mtpHashValue,
-	MerkleTree TheTree, uint32_t* input, uint256 hashTarget);
+	MerkleTree TheTree, uint32_t* input, uint256 hashTarget, cudaStream_t s0);
 
 
 
