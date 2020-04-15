@@ -164,7 +164,7 @@
 #define PACKAGE_URL "http://github.com/zcoinofficial/ccminer"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.3.1-djm34"
+#define PACKAGE_VERSION "1.3.2-djm34"
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
