@@ -76,15 +76,15 @@ extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t
 		cudaDeviceReset();
 //		CUDA_SAFE_CALL(cudaSetDeviceFlags(cudaDeviceScheduleYield));
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-		cudaStreamCreate(&s0);
+//		cudaStreamCreate(&s0);
 //		cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte); 
-		cudaProfilerStop();
+//		cudaProfilerStop();
 //		intensity = cuda_default_throughput(thr_id, intensity); // 18=256*256*4;	
 
 		cudaDeviceProp props;
 		cudaGetDeviceProperties(&props, dev_id);
 		int intensity = 20;
-		if (props.major==7)
+		if (props.major>=7)
 			intensity = 24;
 
 		uint32_t tpb_mtp = get_tpb_mtp(thr_id);
@@ -101,7 +101,7 @@ extern "C" int scanhash_mtp(int nthreads,int thr_id, struct work* work, uint32_t
 
 
 	}
-
+	cudaStreamCreate(&s0);
 	uint32_t _ALIGN(128) endiandata[20];
 	((uint32_t*)pdata)[19] = (pdata[20]); //*/0x00100000; // mtp version not the actual nonce
 
@@ -158,10 +158,10 @@ argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
 //		printf("work->data[17]=%08x\n", work->data[17]);
 		uint32_t foundNonce;
 //		cudaProfilerStart();
-		cudaProfilerStop();
+//		cudaProfilerStop();
 		*hashes_done = pdata[19] - first_nonce + throughput;
 		foundNonce = mtp_cpu_hash_32(thr_id, throughput, pdata[19],s0);
-		cudaProfilerStop();
+//		cudaProfilerStop();
 		uint32_t _ALIGN(64) vhash64[8];
 		if (foundNonce != UINT32_MAX)
 		{
@@ -203,7 +203,7 @@ argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
 				int len = 0;
 
 				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)* MTP_L * 3 * 353);
-
+				cudaStreamDestroy(s0);
 				return res;
 
 			} else {
@@ -231,7 +231,7 @@ argon2_ctx_from_mtp(&context[thr_id], &instance[thr_id]);
 TheEnd:
 //		sctx->job.IncXtra = true;
 		*hashes_done = pdata[19] - first_nonce;
-
+		 cudaStreamDestroy(s0);
 	return 0;
 }
 
@@ -267,7 +267,7 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 
 		cudaDeviceReset();
 		cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-		cudaStreamCreate(&s0);
+
 		//		cudaSetDeviceFlags(cudaDeviceScheduleYield);
 		//		cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte); 
 
@@ -292,7 +292,7 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 
 
 	}
-
+	cudaStreamCreate(&s0);
 	uint32_t _ALIGN(128) endiandata[20];
 
 	((uint32_t*)pdata)[19] = (pdata[20]); //*/0x00100000; // mtp version not the actual nonce
@@ -391,7 +391,7 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 				int len = 0;
 
 				memcpy(mtp->nProofMTP, nProofMTP, sizeof(unsigned char)* MTP_L * 3 * 353);
-
+				cudaStreamDestroy(s0);
 				return res;
 
 			}
@@ -430,7 +430,7 @@ extern "C" int scanhash_mtp_solo(int nthreads, int thr_id, struct work* work, ui
 TheEnd:
 	//		sctx->job.IncXtra = true;
 	*hashes_done = pdata[19] - first_nonce;
-
+	cudaStreamDestroy(s0);
 	return 0;
 }
 

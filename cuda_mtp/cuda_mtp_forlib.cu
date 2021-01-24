@@ -7,12 +7,12 @@
 #include <stdio.h>
 #include <memory.h>
 #define TPB_MTP75 128
-#if __CUDA_ARCH__ == 750
+#if __CUDA_ARCH__ >= 750
 #define TPB_MTP 128
-#define REG 4
+#define REG 2
 #else
 #define TPB_MTP 320
-#define REG 2
+#define REG 1
 #endif
 #define Granularity 8
 #define Granularity2 8
@@ -21,7 +21,7 @@
 #define Zeroing  make_uint4(0,0,0,0)
 #define Gran3  Granularity * 3 / 4
 #define Gran1  Granularity * 1 / 4
-#define SHR_OFF 1
+#define SHR_OFF REG
 #define FARLOAD(x) far[warp][(x)*(Granularity+SHR_OFF) + lane]
 #define FARSTORE(x) far[warp][lane*(Granularity+SHR_OFF) + (x)]
 
@@ -62,42 +62,7 @@ __constant__ uint4 Elements[1];
 #define TPB52 32
 #define TPB30 160
 #define TPB20 160
-/*
-__constant__ const uint2 blakeInit[8] =
-{
-	{ 0xf2bdc948UL, 0x6a09e667UL },
-	{ 0x84caa73bUL, 0xbb67ae85UL },
-	{ 0xfe94f82bUL, 0x3c6ef372UL },
-	{ 0x5f1d36f1UL, 0xa54ff53aUL },
-	{ 0xade682d1UL, 0x510e527fUL },
-	{ 0x2b3e6c1fUL, 0x9b05688cUL },
-	{ 0xfb41bd6bUL, 0x1f83d9abUL },
-	{ 0x137e2179UL, 0x5be0cd19UL }
-};
 
-__constant__ const uint2 blakeFinal[8] =
-{
-	{ 0xf2bdc928UL, 0x6a09e667UL },
-	{ 0x84caa73bUL, 0xbb67ae85UL },
-	{ 0xfe94f82bUL, 0x3c6ef372UL },
-	{ 0x5f1d36f1UL, 0xa54ff53aUL },
-	{ 0xade682d1UL, 0x510e527fUL },
-	{ 0x2b3e6c1fUL, 0x9b05688cUL },
-	{ 0xfb41bd6bUL, 0x1f83d9abUL },
-	{ 0x137e2179UL, 0x5be0cd19UL }
-};
-
-__constant__ const uint64_t blakeFinal_[8] = {
-	 0x6a09e667f2bdc928UL ,
-	 0xbb67ae8584caa73bUL ,
-	 0x3c6ef372fe94f82bUL ,
-	 0xa54ff53a5f1d36f1UL ,
-	 0x510e527fade682d1UL ,
-	 0x9b05688c2b3e6c1fUL ,
-	 0x1f83d9abfb41bd6bUL ,
-	 0x5be0cd19137e2179UL 
-};
-*/
 __constant__ const uint2 blakeIV[8] =
 {
 	{ 0xf3bcc908UL, 0x6a09e667UL },
@@ -252,8 +217,19 @@ __constant__ static const uint32_t blake2b_sigma[12][16] =
      v.ll[c] += v.ll[d]; \
      v.u2[b] = ROTR64XB32(v.u2[b] ^ v.u2[c], 1); \
   } 
-
-
+/*
+#define Gu(r,i,a,b,c,d) \
+   { \
+     v.u2[a] +=   v.u2[b] +  (m.u2[blake2b_sigma[r][2*i]]); \
+     v.u2[d] = eorswap32(v.u2[d] , v.u2[a]); \
+     v.u2[c] += v.u2[d]; \
+     v.u2[b] = ROTR64X24(v.u2[b] ^ v.u2[c]); \
+     v.u2[a] += v.u2[b] + (m.u2[blake2b_sigma[r][2*i+1]]); \
+     v.u2[d] = ROTR64X16(v.u2[d] ^ v.u2[a]); \
+     v.u2[c] += v.u2[d]; \
+     v.u2[b] = ROTR64XB32(v.u2[b] ^ v.u2[c], 1); \
+  } 
+*/
 
 #define ROUNDu(r)  \
   { \
@@ -346,7 +322,7 @@ __device__ __forceinline__ ulonglong2 __ldcg2(const ulonglong2 * __restrict__ pt
 	return ret;
 }
 
-__device__ __forceinline__ uint4 __ldlu(const uint4 * __restrict__ ptr) { uint4 ret; asm volatile ("ld.global.lu.v4.u32 {%0,%1,%2,%3}, [%4];"  : "=r"(ret.x), "=r"(ret.y), "=r"(ret.z), "=r"(ret.w) : __LDG_PTR(ptr)); return ret; }
+//__device__ __forceinline__ uint4 __ldlu(const uint4 * __restrict__ ptr) { uint4 ret; asm volatile ("ld.global.lu.v4.u32 {%0,%1,%2,%3}, [%4];"  : "=r"(ret.x), "=r"(ret.y), "=r"(ret.z), "=r"(ret.w) : __LDG_PTR(ptr)); return ret; }
 
 __device__ __forceinline__ void blakeL1(uint2 &a,uint2 b, uint64_t m) 
 {
@@ -576,13 +552,12 @@ void yloop_init(uint32_t thr_id, uint32_t threads, uint32_t startNounce, uint8 *
 }
 
 
-__global__  /* __launch_bounds__(TPB_MTP, 2) */ 
-void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const Type  * __restrict__ GBlock,
+__global__   /*__launch_bounds__(TPB_MTP, 2)*/  
+void mtp_yloop_old(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const Type  * __restrict__ GBlock,
 	uint32_t * __restrict__ SmallestNonce)
 {
 
-	unsigned mask = 0xFFFFFFFF; //__activemask();
-
+	unsigned mask = /* 0xFFFFFFFF; */ __activemask();
 	uint32_t event_thread = (blockDim.x * blockIdx.x + threadIdx.x); //thread / ThreadNumber;
 	uint32_t NonceIterator = startNounce + event_thread;
 	int lane = lane_id() % (Granularity2);
@@ -703,15 +678,15 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const Ty
 		
 				uint32_t Index = lane  + Granularity * argon_memcost * i; //i * (1 << 25); //// + YIndex;
 				int Index2 = lane  + Granularity * i;
-
+			
 				#pragma unroll 				
 				for (int t = 0; t<Granularity2; t++) {
 				uint32_t IndexLocShuff =  Index + __shfl_sync(mask, YIndex ,t, Granularity2) ;
 //					uint32_t IndexLocShuff = Index + YIndex2[warp][t];
 				asm volatile("prefetchu.L1 [%0];" : : "l"(&GBlock[IndexLocShuff]));
-				far[warp][t][lane] = (Index2<64)? __ldca(&GBlock[IndexLocShuff]) :Zeroing ;				
+				far[warp][t][lane] = (Index2<64)? __ldca(&GBlock[IndexLocShuff]) :Zeroing;				
 				}
-		
+				
 
 //				#if __CUDA_ARCH__ == 520
 //					__syncwarp(mask);
@@ -719,7 +694,7 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const Ty
 
 					#pragma unroll
 					for (int t = Gran1; t < Granularity; t++) 
-						 m.u4[t] =  far[warp][lane][t - Gran1];
+						 m.u4[t] = far[warp][lane][t - Gran1];
 
 				#pragma unroll
 				for (int t = 0; t < 8; t++)
@@ -753,6 +728,8 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const Ty
 
 			}
 
+
+
 			#pragma unroll 
 			for (int t = 0; t<4; t++)
 				YLocal[t] = DataTmp[t];
@@ -769,6 +746,203 @@ void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const Ty
 	}
  
 }
+
+
+
+__global__   /*__launch_bounds__(TPB_MTP, 2)*/
+void mtp_yloop(uint32_t thr_id, uint32_t threads, uint32_t startNounce, const Type  * __restrict__ GBlock,
+	uint32_t * __restrict__ SmallestNonce)
+{
+
+	unsigned mask = /* 0xFFFFFFFF; */ __activemask();
+	uint32_t event_thread = (blockDim.x * blockIdx.x + threadIdx.x); //thread / ThreadNumber;
+	uint32_t NonceIterator = startNounce + event_thread;
+	int lane = lane_id() % (Granularity2);
+	int warp = threadIdx.x / (Granularity2);
+
+
+	{
+
+		uint2 YLocal[4];
+
+
+		const uint2 blakeIVl[8] =
+		{
+			{ 0xf3bcc908UL, 0x6a09e667UL },
+			{ 0x84caa73bUL, 0xbb67ae85UL },
+			{ 0xfe94f82bUL, 0x3c6ef372UL },
+			{ 0x5f1d36f1UL, 0xa54ff53aUL },
+			{ 0xade682d1UL, 0x510e527fUL },
+			{ 0x2b3e6c1fUL, 0x9b05688cUL },
+			{ 0xfb41bd6bUL, 0x1f83d9abUL },
+			{ 0x137e2179UL, 0x5be0cd19UL }
+		};
+
+		const uint2 blakeFinall[8] =
+		{
+			{ 0xf2bdc928UL, 0x6a09e667UL },
+			{ 0x84caa73bUL, 0xbb67ae85UL },
+			{ 0xfe94f82bUL, 0x3c6ef372UL },
+			{ 0x5f1d36f1UL, 0xa54ff53aUL },
+			{ 0xade682d1UL, 0x510e527fUL },
+			{ 0x2b3e6c1fUL, 0x9b05688cUL },
+			{ 0xfb41bd6bUL, 0x1f83d9abUL },
+			{ 0x137e2179UL, 0x5be0cd19UL }
+		};
+
+
+		united  v;
+		united m = { 0 };
+
+
+
+
+		uint4 *TheDat = &((uint4*)pData)[0];
+		for (int i = 0; i<5; i++)
+		{
+			asm volatile("prefetchu.L1 [%0];" : : "l"(&TheDat[i]));
+			m.u4[i] = __ldca(&TheDat[i]);
+		}
+		asm volatile("prefetchu.L1 [%0];" : : "l"(&Elements[0]));
+		m.u4[5] = __ldca(&Elements[0]);
+		m.u4[6].x = NonceIterator;
+
+		//////////////////////////////
+#pragma unroll
+		for (int i = 0; i < 8; ++i)
+			v.u2[i] = blakeFinall[i];
+
+
+		v.u2[8] = blakeIVl[0];
+		v.u2[9] = blakeIVl[1];
+		v.u2[10] = blakeIVl[2];
+		v.u2[11] = blakeIVl[3];
+		v.u2[12] = blakeIVl[4];
+		v.u2[12].x ^= 100;
+		v.u2[13] = blakeIVl[5];
+		v.u2[14] = ~blakeIVl[6];
+		v.u2[15] = blakeIVl[7];
+
+
+#pragma unroll 
+		for (int i = 0; i<12; i++)
+			ROUNDu(i);
+
+#pragma unroll
+		for (int i = 0; i < 4; ++i)
+			((BlakeType*)&YLocal)[i] = blakeFinall[i] ^ v.u2[i] ^ v.u2[i + 8];
+
+
+
+		///////////////////////////////
+#pragma unroll 64
+		for (int j = 0; j < 64; j++)
+		{
+			__shared__ __align__(128)  Type far[(TPB_MTP / Granularity2)][Granularity2][Granularity2 + SHR_OFF];
+
+			uint32_t YIndex = (YLocal[0].x & 0x3FFFFF) * (Granularity);
+
+			//			YIndex2[warp][lane] = (YLocal[0].x & 0x3FFFFF) * (Granularity);
+			//			__syncwarp(mask);
+#pragma unroll
+			for (int t = 0; t< Gran1; t++)
+				m.u4[t] = ((uint4*)YLocal)[t];
+
+
+			BlakeType DataTmp[8] =
+			{
+				{ 0xf2bdc928UL, 0x6a09e667UL },
+				{ 0x84caa73bUL, 0xbb67ae85UL },
+				{ 0xfe94f82bUL, 0x3c6ef372UL },
+				{ 0x5f1d36f1UL, 0xa54ff53aUL },
+				{ 0xade682d1UL, 0x510e527fUL },
+				{ 0x2b3e6c1fUL, 0x9b05688cUL },
+				{ 0xfb41bd6bUL, 0x1f83d9abUL },
+				{ 0x137e2179UL, 0x5be0cd19UL }
+			};
+
+			uint32_t len = 0;
+/*
+			uint32_t YIndexLin[Granularity2];
+			#pragma unroll 	
+			for (int t = 0; t<Granularity2; t++) 
+				YIndexLin[t] =  __shfl_sync(mask, YIndex, t, Granularity2);
+*/
+
+			#pragma unroll 8
+			for (int i = 0; i < 9; i++) {
+
+
+				bool last = (i == 8);
+
+				len += last ? 32 : 128;
+
+				uint32_t Index = lane + Granularity * argon_memcost * i; //i * (1 << 25); //// + YIndex;
+				int Index2 = lane + Granularity * i;
+
+				#pragma unroll 				
+				for (int t = 0; t<Granularity2; t++) {
+					uint32_t IndexLocShuff = Index + __shfl_sync(mask, YIndex, t, Granularity2);
+				//	uint32_t IndexLocShuff = Index + YIndexLin[t];
+					//					uint32_t IndexLocShuff = Index + YIndex2[warp][t];
+//					asm volatile("prefetchu.L1 [%0];" : : "l"(&GBlock[IndexLocShuff]));
+					far[warp][t][lane] = (Index2<64) ? __ldca(&GBlock[IndexLocShuff]) : Zeroing;
+				}
+
+				#pragma unroll
+				for (int t = Gran1; t < Granularity; t++)
+					m.u4[t] = far[warp][lane][t - Gran1];
+
+				#pragma unroll
+				for (int t = 0; t < 8; t++)
+					v.u2[t] = DataTmp[t];
+
+
+
+				v.u2[8] = blakeIVl[0];
+				v.u2[9] = blakeIVl[1];
+				v.u2[10] = blakeIVl[2];
+				v.u2[11] = blakeIVl[3];
+				v.u2[12] = blakeIVl[4];
+				v.u2[12].x ^= len;
+				v.u2[13] = blakeIVl[5];
+				v.u2[14] = last ? ~blakeIVl[6] : blakeIVl[6];
+				v.u2[15] = blakeIVl[7];
+
+				#pragma unroll 
+				for (int t = 0; t<12; t++)
+					ROUNDu(t);
+
+				#pragma unroll 
+				for (int t = 0; t < 8; t++)
+					DataTmp[t] ^= v.u2[t] ^ v.u2[t + 8];
+
+				if (last) continue;
+
+				#pragma unroll
+				for (int t = 0; t< Gran1; t++)
+					m.u4[t] = far[warp][lane][t + Gran3];
+
+			}
+
+
+			#pragma unroll 
+			for (int t = 0; t<4; t++)
+				YLocal[t] = DataTmp[t];
+
+		}
+
+
+
+		if (((uint64_t*)&YLocal)[3] <= ((uint64_t*)pTarget)[3])
+		{
+			atomicMin(&SmallestNonce[0], NonceIterator);
+		}
+
+	}
+
+}
+
 
 
 
@@ -792,7 +966,7 @@ uint32_t get_tpb_mtp(int thr_id)
 {
 //	cudaSetDevice(device_map[thr_id]);
 	uint32_t tpb = (uint32_t)TPB_MTP;
-	if (device_sm[device_map[thr_id]] == 750)
+	if (device_sm[device_map[thr_id]] >= 750)
 	{ 
 		tpb = TPB_MTP75;
 	}
@@ -830,12 +1004,13 @@ __host__
 uint32_t mtp_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, cudaStream_t s0)
 {
 
+
 //	cudaSetDevice(device_map[thr_id]);
 	uint32_t result = UINT32_MAX;
 	cudaMemsetAsync(d_MinNonces[thr_id], 0xff, sizeof(uint32_t), s0);
 
 	uint32_t tpb = TPB_MTP; //TPB52;
-	if (device_sm[device_map[thr_id]] == 750)
+	if (device_sm[device_map[thr_id]] >= 750)
 		tpb = TPB_MTP75;
 	
 	dim3 gridyloop(threads / tpb);
@@ -844,9 +1019,9 @@ uint32_t mtp_cpu_hash_32(int thr_id, uint32_t threads, uint32_t startNounce, cud
 	//yloop_init <<<gridyloop, blockyloop>>>(thr_id, threads, startNounce, GYLocal[thr_id]);
 
 	mtp_yloop << < gridyloop, blockyloop,thr_id,s0 >> >(thr_id, threads, startNounce, (Type*)HBlock[thr_id],  d_MinNonces[thr_id]);
-	cudaStreamSynchronize(s0);
 
-	cudaMemcpy(h_MinNonces[thr_id], d_MinNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost);
+	cudaStreamSynchronize(s0);
+	cudaMemcpyAsync(h_MinNonces[thr_id], d_MinNonces[thr_id], sizeof(uint32_t), cudaMemcpyDeviceToHost,s0);
 	cudaStreamSynchronize(s0);
 
 	result = *h_MinNonces[thr_id];
@@ -1586,7 +1761,7 @@ __host__ void get_block(int thr_id, void* d, uint32_t index, cudaStream_t s0) {
 }
 
 
-__host__ void mtp_i_cpu(int thr_id, uint32_t *block_header) {
+__host__ void mtp_i_cpu(int thr_id, uint32_t *block_header, cudaStream_t s0) {
 
 //	cudaSetDevice(device_map[thr_id]);
 	cudaError_t err = cudaMemcpy(Header[thr_id], block_header, 8 * sizeof(uint32_t), cudaMemcpyHostToDevice);
@@ -1602,20 +1777,20 @@ __host__ void mtp_i_cpu(int thr_id, uint32_t *block_header) {
 	//        for(int i=0;i<4;i++)
 	//                mtp_i << <grid, block>> >(HBlock[thr_id],Header[thr_id],i);
 
-	mtp_i<0> << <grid, block >> >((uint4*)HBlock[thr_id], Header[thr_id]);
-//	cudaDeviceSynchronize();
-	mtp_i<1> << <grid, block >> >((uint4*)HBlock[thr_id], Header[thr_id]);
-//	cudaDeviceSynchronize();
-	mtp_i<2> << <grid, block >> >((uint4*)HBlock[thr_id], Header[thr_id]);
-//	cudaDeviceSynchronize();
-	mtp_i<3> << <grid, block >> >((uint4*)HBlock[thr_id], Header[thr_id]);
-//	cudaDeviceSynchronize();
+	mtp_i<0> << <grid, block, thr_id, s0 >> >((uint4*)HBlock[thr_id], Header[thr_id]);
+	cudaStreamSynchronize(s0);
+	mtp_i<1> << <grid, block, thr_id, s0 >> >((uint4*)HBlock[thr_id], Header[thr_id]);
+	cudaStreamSynchronize(s0);
+	mtp_i<2> << <grid, block, thr_id, s0 >> >((uint4*)HBlock[thr_id], Header[thr_id]);
+	cudaStreamSynchronize(s0);
+	mtp_i<3> << <grid, block, thr_id, s0 >> >((uint4*)HBlock[thr_id], Header[thr_id]);
+	cudaStreamSynchronize(s0);
 
 	tpb = 256;
 	dim3 grid2(1048576 * 4 / tpb);
 	dim3 block2(tpb);
-	mtp_fc << <grid2, block2 >> >(1048576 * 4, (uint4*)HBlock[thr_id], buffer_a[thr_id]);
-//	cudaDeviceSynchronize();
+	mtp_fc << <grid2, block2, thr_id, s0 >> >(1048576 * 4, (uint4*)HBlock[thr_id], buffer_a[thr_id]);
+	cudaStreamSynchronize(s0);
 
 }
 
@@ -1656,11 +1831,11 @@ __host__ void mtp_i_cpu2(int thr_id, uint32_t *block_header, cudaStream_t s0) {
 
 
 __host__
-void mtp_fill_1b(int thr_id, uint64_t *Block, uint32_t block_nr)
+void mtp_fill_1b(int thr_id, uint64_t *Block, uint32_t block_nr, cudaStream_t s0)
 {
 //	cudaSetDevice(device_map[thr_id]);
 	uint4 *Blockptr = &HBlock[thr_id][block_nr * 64];
-	cudaError_t err = cudaMemcpy(Blockptr, Block, 256 * sizeof(uint32_t), cudaMemcpyHostToDevice);
+	cudaError_t err = cudaMemcpyAsync(Blockptr, Block, 256 * sizeof(uint32_t), cudaMemcpyHostToDevice, s0);
 //subdivide blocks in 8 units of 128
 
 	if (err != cudaSuccess)
